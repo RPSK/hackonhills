@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en" class=""> <!-- 'dark' class will be added here -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NIT Hamirpur | Modern Student Dashboard</title>
+    
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Chart.js for graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+
+    <!-- Three.js for 3D model -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <!-- Theme Colors and Tailwind Config -->
+    <style>
+        /* Define CSS variables for light and dark themes */
+        :root {
+            --color-primary-teal: #008080;
+            --color-primary-teal-hover: #006666;
+            --color-accent-light: #E0FFFF;
+            --color-card-bg: #FFFFFF;
+            --color-page-bg: #F7F7F7;
+            --color-text-primary: #1f2937; /* gray-800 */
+            --color-text-secondary: #6b7280; /* gray-500 */
+            --color-text-muted: #9ca3af; /* gray-400 */
+            --color-border: #e5e7eb; /* gray-200 */
+        }
+
+        .dark {
+            --color-primary-teal: #0d9488; /* Brighter teal */
+            --color-primary-teal-hover: #0f766e;
+            --color-accent-light: #164e63; /* Dark cyan */
+            --color-card-bg: #1f2937; /* gray-800 */
+            --color-page-bg: #111827; /* gray-900 */
+            --color-text-primary: #f9fafb; /* gray-50 */
+            --color-text-secondary: #9ca3af; /* gray-400 */
+            --color-text-muted: #6b7280; /* gray-500 */
+            --color-border: #374151; /* gray-700 */
+        }
+
+        /* Apply base transition for smooth theme switching */
+        body {
+            background-color: var(--color-page-bg);
+            color: var(--color-text-primary);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--color-text-muted);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--color-text-secondary);
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--color-page-bg);
+        }
+
+        .shadow-custom {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .dark .shadow-custom {
+             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* 3D Canvas container */
+        #3d-canvas-container {
+            width: 100%;
+            height: 250px; /* Fixed height for the card */
+            border-radius: 0.75rem; /* 12px */
+            overflow: hidden;
+            cursor: grab;
+        }
+        #3d-canvas-container:active {
+            cursor: grabbing;
+        }
+        
+        /* Subtle transition for cards */
+        .interactive-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .interactive-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -4px rgba(0, 0, 0, 0.07);
+        }
+        .dark .interactive-card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 128, 128, 0.1), 0 4px 6px -4px rgba(0, 128, 128, 0.1);
+        }
+
+        /* Notification dot */
+        .notification-dot {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 10px;
+            height: 10px;
+            background-color: #ef4444; /* red-500 */
+            border-radius: 9999px;
+            border: 2px solid var(--color-card-bg);
+        }
+    </style>
+    
+    <!-- Configure Tailwind -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class', // Enable dark mode
+            theme: {
+                extend: {
+                    colors: {
+                        'primary-teal': 'var(--color-primary-teal)',
+                        'primary-teal-hover': 'var(--color-primary-teal-hover)',
+                        'accent-light': 'var(--color-accent-light)',
+                        'card-bg': 'var(--color-card-bg)',
+                        'page-bg': 'var(--color-page-bg)',
+                        'text-primary': 'var(--color-text-primary)',
+                        'text-secondary': 'var(--color-text-secondary)',
+                        'text-muted': 'var(--color-text-muted)',
+                        'border-color': 'var(--color-border)',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-page-bg font-sans min-h-screen">
+
+    <!-- Modal for Detailed Views -->
+    <div id="detailModal" class="fixed inset-0 bg-gray-900 bg-opacity-70 backdrop-blur-sm z-50 hidden items-center justify-center p-4" onclick="closeModal()">
+        <div class="bg-card-bg text-text-primary p-6 md:p-8 rounded-xl shadow-2xl max-w-lg w-full transform transition-all duration-300 scale-100" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-start mb-4">
+                <h3 id="modalTitle" class="text-2xl font-bold"></h3>
+                <button onclick="closeModal()" class="text-text-muted hover:text-red-500 transition-colors">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div id="modalContent" class="text-text-secondary space-y-3">
+                <!-- Content injected by JavaScript -->
+            </div>
+            <div id="modalSource" class="mt-4 text-xs text-primary-teal italic"></div>
+        </div>
+    </div>
+    
+    <!-- Notifications Panel -->
+    <div id="notificationsPanel" class="fixed top-20 right-4 md:right-8 lg:right-auto lg:left-[calc(50%+19rem)] xl:left-[calc(50%+24rem)] z-40 w-80 max-w-sm bg-card-bg rounded-xl shadow-2xl border border-border-color transform transition-all duration-300 scale-95 opacity-0 pointer-events-none -translate-y-2">
+        <div class="p-4 border-b border-border-color">
+            <h3 class="font-semibold text-text-primary">Notifications</h3>
+        </div>
+        <div class="p-4 space-y-3 max-h-80 overflow-y-auto">
+            <!-- Notification Item -->
+            <div class="flex items-start space-x-3">
+                <div class="bg-primary-teal text-white rounded-full p-2">
+                    <i data-lucide="calendar-check" class="w-4 h-4"></i>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-text-primary">DBMS Mid-Term Exam</p>
+                    <p class="text-xs text-text-secondary">Your exam is scheduled for 25/11/2025.</p>
+                </div>
+            </div>
+            <!-- Notification Item -->
+            <div class="flex items-start space-x-3">
+                <div class="bg-red-500 text-white rounded-full p-2">
+                    <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-text-primary">Low Attendance Warning</p>
+                    <p class="text-xs text-text-secondary">Your DBMS attendance is at 75%.</p>
+                </div>
+            </div>
+            <!-- Notification Item -->
+            <div class="flex items-start space-x-3">
+                <div class="bg-green-500 text-white rounded-full p-2">
+                    <i data-lucide="check-circle" class="w-4 h-4"></i>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-text-primary">Assignment Graded</p>
+                    <p class="text-xs text-text-secondary">Your DSA Assignment 3 has been graded.</p>
+                </div>
+            </div>
+        </div>
+        <div class="p-3 bg-page-bg border-t border-border-color rounded-b-xl text-center">
+            <a href="#" class="text-sm font-medium text-primary-teal hover:underline">View all notifications</a>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Structure -->
+    <div class="flex flex-col min-h-screen">
+        <!-- Header / Welcome Section -->
+        <header class="bg-card-bg shadow-sm p-4 sticky top-0 z-30 border-b border-border-color">
+            <div class="max-w-7xl mx-auto flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <!-- Profile Button -->
+                    <button id="profileBtn" class="flex items-center space-x-2 text-text-primary hover:text-primary-teal transition-colors">
+                        <img id="profileImg" class="w-10 h-10 rounded-full object-cover border-2 border-primary-teal p-0.5 cursor-pointer" src="https://placehold.co/40x40/008080/FFFFFF?text=AS" alt="Aniket Sharma" title="Click for Profile Details">
+                        <span class="hidden sm:inline font-semibold">Aniket Sharma</span>
+                    </button>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <!-- Navigation -->
+                    <nav class="hidden md:flex space-x-6 text-text-secondary">
+                        <a href="#" class="font-medium text-primary-teal transition-colors flex items-center"><i data-lucide="home" class="w-5 h-5 mr-1"></i> Home</a>
+                        <a href="#" class="font-medium hover:text-primary-teal transition-colors flex items-center"><i data-lucide="book-open" class="w-5 h-5 mr-1"></i> Courses</a>
+                        <a href="#" class="font-medium hover:text-primary-teal transition-colors flex items-center"><i data-lucide="calendar" class="w-5 h-5 mr-1"></i> Schedule</a>
+                    </nav>
+                    
+                    <!-- Theme Toggle -->
+                    <button id="theme-toggle" class="text-text-secondary hover:text-primary-teal transition-colors p-2 rounded-full hover:bg-accent-light">
+                        <i id="theme-icon-sun" data-lucide="sun" class="w-5 h-5 hidden"></i>
+                        <i id="theme-icon-moon" data-lucide="moon" class="w-5 h-5 hidden"></i>
+                    </button>
+
+                    <!-- Notifications Button -->
+                    <button id="notifications-toggle" class="relative text-text-secondary hover:text-primary-teal transition-colors p-2 rounded-full hover:bg-accent-light">
+                        <i data-lucide="bell" class="w-5 h-5"></i>
+                        <span class="notification-dot"></span>
+                    </button>
+                    
+                    <!-- Welcome Text -->
+                    <div class="hidden md:block text-right ml-4">
+                        <p id="welcomeNote" class="text-lg font-bold text-text-primary"></p>
+                        <p id="dateTime" class="text-sm text-text-secondary"></p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                <!-- Left Column (Performance & Attendance) -->
+                <div class="lg:col-span-2 space-y-6">
+
+                    <!-- Performance and Grade Graph Showcase (Feature 3) - UPGRADED -->
+                    <div class="bg-card-bg p-6 rounded-xl shadow-custom border border-border-color interactive-card">
+                        <h2 class="text-xl font-semibold text-text-primary mb-4 flex items-center"><i data-lucide="bar-chart-3" class="w-6 h-6 mr-2 text-primary-teal"></i> Academic Performance Overview</h2>
+                        <p class="text-text-secondary mb-6">Past semester grades and overall progression.</p>
+
+                        <!-- Real Chart.js Canvas -->
+                        <div class="h-64 md:h-80 relative">
+                            <canvas id="performanceChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Upcoming Classes Showcase (Feature 5) -->
+                    <div class="bg-card-bg p-6 rounded-xl shadow-custom border border-border-color">
+                        <h2 class="text-xl font-semibold text-text-primary mb-4 flex items-center"><i data-lucide="calendar-check" class="w-6 h-6 mr-2 text-primary-teal"></i> Upcoming Classes</h2>
+                        <div id="classesList" class="space-y-3">
+                            <!-- Class items injected by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column (Tests, Attendance, To-Do, 3D Model, Progress) -->
+                <div class="lg:col-span-1 space-y-6">
+
+                    <!-- NEW: 3D Interactive Model -->
+                    <div class="bg-card-bg p-6 rounded-xl shadow-custom border border-border-color interactive-card">
+                        <h2 class="text-xl font-semibold text-text-primary mb-4 flex items-center"><i data-lucide="brain" class="w-6 h-6 mr-2 text-primary-teal"></i> Interactive Learning</h2>
+                        <p class="text-text-secondary mb-4 text-sm">Drag to rotate the model. (Torus Knot)</p>
+                        <div id="3d-canvas-container" class="bg-accent-light">
+                            <!-- Three.js canvas will be inserted here -->
+                        </div>
+                    </div>
+                    
+                    <!-- NEW: Progress Tracker -->
+                    <div class="bg-card-bg p-6 rounded-xl shadow-custom border border-border-color interactive-card">
+                        <h2 class="text-xl font-semibold text-text-primary mb-4 flex items-center"><i data-lucide="trending-up" class="w-6 h-6 mr-2 text-primary-teal"></i> B.Tech Progress</h2>
+                        <div class="space-y-3">
+                            <p class="text-sm text-text-secondary">You are in <span class="font-bold text-text-primary">Semester 4</span> of 8.</p>
+                            <div class="w-full bg-accent-light rounded-full h-2.5">
+                                <div class="bg-primary-teal h-2.5 rounded-full" style="width: 50%"></div>
+                            </div>
+                            <p class="text-xs text-text-secondary text-right">50% Complete</p>
+                        </div>
+                    </div>
+
+                    <!-- Attendance Action (Feature 4) -->
+                    <div class="bg-card-bg p-6 rounded-xl shadow-custom border border-border-color interactive-card">
+                        <h2 class="text-xl font-semibold text-text-primary mb-4 flex items-center"><i data-lucide="users-2" class="w-6 h-6 mr-2 text-primary-teal"></i> Attendance Actions</h2>
+                        <button onclick="showAttendanceOptions()" class="w-full bg-primary-teal text-white py-3 rounded-xl font-bold hover:bg-primary-teal-hover transition-all shadow-md shadow-primary-teal/30 flex items-center justify-center">
+                            <i data-lucide="user-check" class="w-5 h-5 mr-2"></i> Manage Attendance
+                        </button>
+                    </div>
+
+                    <!-- Upcoming Tests/Exams (Feature 6) -->
+                    <div class="bg-card-bg p-6 rounded-xl shadow-custom border border-border-color">
+                        <h2 class="text-xl font-semibold text-text-primary mb-4 flex items-center"><i data-lucide="clipboard-list" class="w-6 h-6 mr-2 text-primary-teal"></i> Upcoming Tests & Exams</h2>
+                        <div id="testsList" class="space-y-3">
+                            <!-- Test items injected by JS -->
+                        </div>
+                    </div>
+
+                    <!-- To-Do List (Feature 7) -->
+                    <div class="bg-card-bg p-6 rounded-xl shadow-custom border border-border-color">
+                        <h2 class="text-xl font-semibold text-text-primary mb-4 flex items-center"><i data-lucide="list-checks" class="w-6 h-6 mr-2 text-primary-teal"></i> Student To-Do List</h2>
+                        <div class="flex mb-4 space-x-2">
+                            <input type="text" id="todoInput" placeholder="Add a new task..." class="flex-grow p-2 border border-border-color rounded-lg focus:ring-primary-teal focus:border-primary-teal transition-colors bg-card-bg text-text-primary placeholder:text-text-muted">
+                            <button onclick="addTodo()" class="bg-primary-teal text-white p-2 rounded-lg hover:bg-primary-teal-hover transition-colors">
+                                <i data-lucide="plus" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                        <ul id="todoList" class="space-y-2 text-text-primary">
+                            <!-- To-do items injected by JS -->
+                        </ul>
+                    </div>
+
+                    <!-- Teacher Profiles Button (Feature 8) -->
+                    <div class="bg-card-bg p-6 rounded-xl shadow-custom border border-border-color interactive-card">
+                        <h2 class="text-xl font-semibold text-text-primary mb-4 flex items-center"><i data-lucide="briefcase" class="w-6 h-6 mr-2 text-primary-teal"></i> Faculty Directory</h2>
+                        <button onclick="showTeacherProfiles()" class="w-full bg-gray-200 dark:bg-gray-700 text-text-primary py-3 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all flex items-center justify-center">
+                            <i data-lucide="graduation-cap" class="w-5 h-5 mr-2"></i> Look at your Teachers
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer / Motivational Quote (Feature 10) -->
+        <footer class="bg-card-bg p-4 mt-8 border-t border-border-color">
+            <div class="max-w-7xl mx-auto text-center text-sm text-text-secondary italic">
+                <p id="motivationalQuote" class="p-2 rounded-lg bg-accent-light border border-primary-teal/50 text-primary-teal dark:text-accent-light"></p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // --- DUMMY DATA (Same as before) ---
+        const studentData = {
+            name: "Aniket Sharma",
+            course: "B.Tech (Computer Science & Engineering)",
+            rollNumber: "21CS1005",
+            institute: "National Institute of Technology, Hamirpur (NIT-H)",
+            overallAttendance: "78.5%",
+            gradeHistory: "8.25 CGPA",
+            grades: [8.2, 9.0, 7.8] // For chart
+        };
+
+        const classesData = [
+            { id: 1, subject: "Data Structures & Algorithms", timing: "09:00 AM - 10:00 AM", topic: "Tree Traversal", teacher: "Dr. Priya Singh", location: "CSE Block, Room 301", attendance: "85%", pastGrade: "A-" },
+            { id: 2, subject: "Database Management Systems", timing: "11:00 AM - 12:00 PM", topic: "SQL Joins", teacher: "Prof. Rohan Mehra", location: "Central Lecture Hall, 2B", attendance: "75%", pastGrade: "B+" },
+            { id: 3, subject: "Environmental Studies", timing: "02:00 PM - 03:00 PM", topic: "Renewable Energy", teacher: "Dr. Kavita Jain", location: "Civil Dept, Seminar Hall 1", attendance: "92%", pastGrade: "O" },
+        ];
+
+        const testsData = [
+            { id: 101, subject: "DBMS Mid-Term Exam", date: "25/11/2025", timing: "10:00 AM - 12:00 PM", syllabus: "Modules 1-3: Relational Algebra, ER Diagrams, and SQL.", location: "Central Exam Hall (New Wing)" },
+            { id: 102, subject: "DSA End-Term Project Submission", date: "05/12/2025", timing: "11:59 PM", syllabus: "Implementation of a Graph Algorithm.", location: "Online Submission via Moodle" },
+        ];
+
+        const teacherData = [
+            { name: "Dr. Priya Singh", subject: "Data Structures & Algorithms", qualifications: "Ph.D. (IIT Delhi), M.Tech (NIT-H)", researchPapers: 35, pastInstitutes: "IIT Gandhinagar, IIIT Hyderabad", studentRating: "4.8/5.0" },
+            { name: "Prof. Rohan Mehra", subject: "Database Management Systems", qualifications: "M.Tech (BITS Pilani), B.Tech (IIT Kanpur)", researchPapers: 12, pastInstitutes: "Infosys (Senior Consultant)", studentRating: "4.5/5.0" },
+            { name: "Dr. Kavita Jain", subject: "Environmental Studies", qualifications: "Ph.D. (BHU), PostDoc (Stanford)", researchPapers: 50, pastInstitutes: "University of Delhi, TERI", studentRating: "4.9/5.0" },
+        ];
+
+        const motivationalQuotes = [
+            "“Arise, awake, and stop not till the goal is reached.” — Swami Vivekananda",
+            "“You have to dream before your dreams can come true.” — A. P. J. Abdul Kalam",
+            "“Be the change that you wish to see in the world.” — Mahatma Gandhi",
+            "“The future belongs to those who believe in the beauty of their dreams.” — Eleanor Roosevelt",
+            "“Education is the most powerful weapon which you can use to change the world.” — Nelson Mandela",
+        ];
+
+        let todoListItems = [
+            { text: "Complete DBMS Assignment 4", completed: false },
+            { text: "Prepare presentation slides for DSA", completed: true },
+            { text: "Review Environmental Studies notes", completed: false }
+        ];
+
+        // --- GLOBAL VARIABLES ---
+        let performanceChartInstance = null;
+        let isDarkMode = false;
+        
+        // --- UTILITY FUNCTIONS ---
+
+        function updateDateTime() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+            document.getElementById('welcomeNote').textContent = "Namaste, Aniket!";
+            document.getElementById('dateTime').textContent = `${dateStr} | ${timeStr}`;
+
+            setTimeout(updateDateTime, 60000); // Update every minute
+        }
+
+        function setMotivationalQuote() {
+            const quoteElement = document.getElementById('motivationalQuote');
+            const randomIndex = Math.floor(Math.random() * motivationalQuotes.length);
+            quoteElement.textContent = motivationalQuotes[randomIndex];
+        }
+
+        // --- MODAL FUNCTIONS ---
+
+        const modal = document.getElementById('detailModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalContent = document.getElementById('modalContent');
+        const modalSource = document.getElementById('modalSource');
+
+        function showModal(title, contentHTML, source = "") {
+            modalTitle.textContent = title;
+            modalContent.innerHTML = contentHTML;
+            modalSource.textContent = source;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            // Re-render icons after modal content is added
+            setTimeout(lucide.createIcons, 50);
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            modalContent.innerHTML = '';
+        }
+        
+        // --- NOTIFICATIONS PANEL ---
+        const notificationsPanel = document.getElementById('notificationsPanel');
+        const notificationsToggle = document.getElementById('notifications-toggle');
+
+        notificationsToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isHidden = notificationsPanel.classList.contains('opacity-0');
+            if (isHidden) {
+                notificationsPanel.classList.remove('scale-95', 'opacity-0', 'pointer-events-none', '-translate-y-2');
+                notificationsPanel.classList.add('scale-100', 'opacity-100');
+            } else {
+                notificationsPanel.classList.add('scale-95', 'opacity-0', 'pointer-events-none', '-translate-y-2');
+                notificationsPanel.classList.remove('scale-100', 'opacity-100');
+            }
+        });
+        
+        // Close panel when clicking outside
+        window.addEventListener('click', (e) => {
+            if (!notificationsPanel.contains(e.target) && !notificationsToggle.contains(e.target)) {
+                notificationsPanel.classList.add('scale-95', 'opacity-0', 'pointer-events-none', '-translate-y-2');
+                notificationsPanel.classList.remove('scale-100', 'opacity-100');
+            }
+        });
+
+        // --- DARK MODE THEME TOGGLE ---
+        const themeToggle = document.getElementById('theme-toggle');
+        const sunIcon = document.getElementById('theme-icon-sun');
+        const moonIcon = document.getElementById('theme-icon-moon');
+
+        function setMode(dark) {
+            isDarkMode = dark;
+            if (dark) {
+                document.documentElement.classList.add('dark');
+                sunIcon.classList.remove('hidden');
+                moonIcon.classList.add('hidden');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                sunIcon.classList.add('hidden');
+                moonIcon.classList.remove('hidden');
+                localStorage.setItem('theme', 'light');
+            }
+            // Update chart colors
+            if (performanceChartInstance) {
+                updateChartColors();
+            }
+        }
+
+        themeToggle.addEventListener('click', () => {
+            setMode(!isDarkMode);
+        });
+        
+        // Check for saved theme on load
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark' || (savedTheme === null && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                setMode(true);
+            } else {
+                setMode(false);
+            }
+        }
+        
+        // --- CHART.JS IMPLEMENTATION ---
+        
+        function getChartColors() {
+            // Get computed style from CSS variables
+            const styles = getComputedStyle(document.documentElement);
+            return {
+                primary: styles.getPropertyValue('--color-primary-teal').trim(),
+                text: styles.getPropertyValue('--color-text-secondary').trim(),
+                grid: styles.getPropertyValue('--color-border').trim() + '80', // Add alpha for grid
+            };
+        }
+
+        function renderPerformanceChart() {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            const colors = getChartColors();
+            
+            const gradient = ctx.createLinearGradient(0, 0, 0, 320);
+            gradient.addColorStop(0, colors.primary + 'B3'); // 70% opacity
+            gradient.addColorStop(1, colors.primary + '00'); // 0% opacity
+
+            performanceChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Semester 1', 'Semester 2', 'Semester 3', 'Overall CGPA'],
+                    datasets: [{
+                        label: 'GPA',
+                        data: [...studentData.grades, parseFloat(studentData.gradeHistory)],
+                        backgroundColor: colors.primary,
+                        borderColor: colors.primary,
+                        borderWidth: 2,
+                        borderRadius: 8,
+                        barThickness: 30,
+                    },
+                    { // Add a line dataset for trend
+                        type: 'line',
+                        label: 'Trend',
+                        data: [...studentData.grades, parseFloat(studentData.gradeHistory)],
+                        borderColor: colors.primary,
+                        borderWidth: 3,
+                        pointBackgroundColor: colors.primary,
+                        pointRadius: 5,
+                        fill: true,
+                        backgroundColor: gradient,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 6,
+                            max: 10,
+                            ticks: { color: colors.text },
+                            grid: { color: colors.grid, drawBorder: false }
+                        },
+                        x: {
+                            ticks: { color: colors.text },
+                            grid: { display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: '#000',
+                            titleColor: '#FFF',
+                            bodyColor: '#FFF',
+                            cornerRadius: 6,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return `GPA: ${context.formattedValue}`;
+                                }
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                }
+            });
+        }
+        
+        function updateChartColors() {
+            if (!performanceChartInstance) return;
+            const colors = getChartColors();
+            
+            const gradient = performanceChartInstance.ctx.createLinearGradient(0, 0, 0, 320);
+            gradient.addColorStop(0, colors.primary + 'B3');
+            gradient.addColorStop(1, colors.primary + '00');
+            
+            // Update datasets
+            performanceChartInstance.data.datasets[0].backgroundColor = colors.primary;
+            performanceChartInstance.data.datasets[0].borderColor = colors.primary;
+            performanceChartInstance.data.datasets[1].borderColor = colors.primary;
+            performanceChartInstance.data.datasets[1].pointBackgroundColor = colors.primary;
+            performanceChartInstance.data.datasets[1].backgroundColor = gradient;
+            
+            // Update scales
+            performanceChartInstance.options.scales.y.ticks.color = colors.text;
+            performanceChartInstance.options.scales.y.grid.color = colors.grid;
+            performanceChartInstance.options.scales.x.ticks.color = colors.text;
+            
+            performanceChartInstance.update();
+        }
+
+        // --- THREE.JS IMPLEMENTATION ---
+        
+        let scene, camera, renderer, model, controls;
+
+        function init3DModel() {
+            const container = document.getElementById('3d-canvas-container');
+            if (!container) return;
+
+            // 1. Scene
+            scene = new THREE.Scene();
+            
+            // 2. Camera
+            camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.z = 5;
+
+            // 3. Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            // 4. Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.enablePan = false;
+            controls.enableZoom = false; // Disable zoom
+            controls.autoRotate = true; // Auto-rotate
+            controls.autoRotateSpeed = 2.0;
+
+            // 5. Model (Using TorusKnot for a 'brain-like' complex shape)
+            const geometry = new THREE.TorusKnotGeometry(1.5, 0.5, 100, 16);
+            const material = new THREE.MeshNormalMaterial({
+                 wireframe: false // Set to false for a solid look
+            });
+            model = new THREE.Mesh(geometry, material);
+            scene.add(model);
+            
+            // 6. Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 5, 5);
+            scene.add(directionalLight);
+
+            // 7. Resize listener
+            window.addEventListener('resize', onWindowResize, false);
+            
+            // 8. Start animation loop
+            animate3D();
+        }
+
+        function animate3D() {
+            requestAnimationFrame(animate3D);
+            controls.update(); // Update controls (for damping and auto-rotate)
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('3d-canvas-container');
+            if (!container) return;
+            
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+
+        // --- FEATURE IMPLEMENTATIONS (Original) ---
+
+        // 1. Student Profile Details
+        document.getElementById('profileBtn').addEventListener('click', () => {
+            const content = `
+                <p><span class="font-semibold text-primary-teal">Name:</span> ${studentData.name}</p>
+                <p><span class="font-semibold text-primary-teal">Course:</span> ${studentData.course}</p>
+                <p><span class="font-semibold text-primary-teal">Roll Number:</span> ${studentData.rollNumber}</p>
+                <p><span class="font-semibold text-primary-teal">Institute:</span> ${studentData.institute}</p>
+                <p><span class="font-semibold text-primary-teal">Overall Attendance:</span> ${studentData.overallAttendance}</p>
+                <p><span class="font-semibold text-primary-teal">Current CGPA:</span> ${studentData.gradeHistory}</p>
+            `;
+            showModal("Student Profile", content, "This data is private to you.");
+        });
+
+        // 4. Attendance Options
+        function showAttendanceOptions() {
+            const content = `
+                <button class="w-full bg-primary-teal text-white py-3 rounded-xl font-bold hover:bg-primary-teal-hover transition-all mb-4 flex items-center justify-center" onclick="showAttendanceConfirmation()">
+                    <i data-lucide="scan" class="w-5 h-5 mr-2"></i> Mark Attendance (Simulated)
+                </button>
+                <button class="w-full bg-gray-200 dark:bg-gray-700 text-text-primary py-3 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all flex items-center justify-center" onclick="showViewAttendance()">
+                    <i data-lucide="eye" class="w-5 h-5 mr-2"></i> View Detailed Attendance
+                </button>
+            `;
+            showModal("Attendance Management", content);
+        }
+
+        function showAttendanceConfirmation() {
+            const content = `
+                <div class="text-center p-4 bg-green-50 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-lg border border-green-200 dark:border-green-700">
+                    <i data-lucide="check-circle" class="w-8 h-8 mx-auto mb-2"></i>
+                    <p class="font-bold">Attendance Marked Successfully!</p>
+                    <p class="text-sm mt-1">Simulated check-in for the current class.</p>
+                </div>
+            `;
+            showModal("Mark Attendance", content);
+        }
+
+        function showViewAttendance() {
+            const content = `
+                <p class="text-lg font-bold">Total Attendance: <span class="text-primary-teal">${studentData.overallAttendance}</span></p>
+                <div class="mt-3 space-y-2">
+                    <div class="flex justify-between border-b border-border-color pb-1"><span>DSA:</span> <span class="font-medium">85%</span></div>
+                    <div class="flex justify-between border-b border-border-color pb-1"><span>DBMS:</span> <span class="font-medium">75%</span></div>
+                    <div class="flex justify-between border-b border-border-color pb-1"><span>EVS:</span> <span class="font-medium">92%</span></div>
+                    <p class="text-xs italic text-red-500 pt-2">Warning: DBMS is approaching the minimum required 75% attendance!</p>
+                </div>
+            `;
+            showModal("Detailed Attendance View", content);
+        }
+
+        // 5. Upcoming Classes Showcase
+        function renderClasses() {
+            const list = document.getElementById('classesList');
+            list.innerHTML = classesData.map(c => `
+                <div class="class-item bg-accent-light p-4 rounded-xl flex items-center justify-between cursor-pointer hover:shadow-md transition-all border-l-4 border-primary-teal interactive-card" onclick="showClassDetails(${c.id})">
+                    <div>
+                        <p class="font-semibold text-text-primary">${c.subject}</p>
+                        <p class="text-sm text-text-secondary">${c.timing} | ${c.topic}</p>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-5 h-5 text-primary-teal"></i>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function showClassDetails(id) {
+            const c = classesData.find(item => item.id === id);
+            if (!c) return;
+            const content = `
+                <p><span class="font-semibold text-primary-teal">Subject:</span> ${c.subject}</p>
+                <p><span class="font-semibold text-primary-teal">Timing:</span> ${c.timing}</p>
+                <p><span class="font-semibold text-primary-teal">Topic:</span> ${c.topic}</p>
+                <p><span class="font-semibold text-primary-teal">Teacher:</span> ${c.teacher}</p>
+                <p><span class="font-semibold text-primary-teal">Location:</span> ${c.location}</p>
+                <p class="pt-2 border-t border-border-color mt-3"><span class="font-semibold text-primary-teal">Your Attendance in ${c.subject}:</span> ${c.attendance}</p>
+                <p><span class="font-semibold text-primary-teal">Your Past Grade in ${c.subject}:</span> ${c.pastGrade}</p>
+            `;
+            showModal(`${c.subject} Details`, content);
+        }
+
+        // 6. Upcoming Tests/Exams Showcase
+        function renderTests() {
+            const list = document.getElementById('testsList');
+            list.innerHTML = testsData.map(t => `
+                <div class="test-item bg-card-bg p-4 rounded-xl flex items-center justify-between cursor-pointer hover:shadow-md transition-shadow border border-border-color interactive-card" onclick="showTestDetails(${t.id})">
+                    <div>
+                        <p class="font-semibold text-text-primary">${t.subject}</p>
+                        <p class="text-sm text-red-500 flex items-center"><i data-lucide="calendar-days" class="w-4 h-4 mr-1"></i> ${t.date}</p>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-5 h-5 text-text-muted"></i>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function showTestDetails(id) {
+            const t = testsData.find(item => item.id === id);
+            if (!t) return;
+            const content = `
+                <p><span class="font-semibold text-primary-teal">Subject:</span> ${t.subject}</p>
+                <p><span class="font-semibold text-primary-teal">Date:</span> ${t.date}</p>
+                <p><span class="font-semibold text-primary-teal">Timing:</span> ${t.timing}</p>
+                <p><span class="font-semibold text-primary-teal">Location:</span> ${t.location}</p>
+                <div class="pt-3 border-t border-border-color mt-3">
+                    <p class="font-semibold text-primary-teal mb-1">Syllabus:</p>
+                    <p class="text-sm">${t.syllabus}</p>
+                </div>
+                <div class="text-center mt-4 p-3 bg-yellow-50 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-300 rounded-lg font-bold border border-yellow-200 dark:border-yellow-700">
+                    Good luck for your exam! All the best!
+                </div>
+            `;
+            showModal(`${t.subject} Details`, content);
+        }
+
+        // 7. To-Do List
+        function renderTodoList() {
+            const list = document.getElementById('todoList');
+            list.innerHTML = todoListItems.map((item, index) => `
+                <li class="flex items-center justify-between p-2 rounded-lg ${item.completed ? 'bg-green-50 dark:bg-green-900/50 line-through text-text-muted' : 'bg-accent-light hover:bg-primary-teal/20'} transition-colors">
+                    <span class="flex-grow mr-4">${item.text}</span>
+                    <button onclick="toggleTodo(${index})" class="text-sm p-1 rounded-full ${item.completed ? 'text-green-600 hover:text-green-800' : 'text-primary-teal hover:text-green-600'} transition-colors">
+                        <i data-lucide="${item.completed ? 'check-circle' : 'circle'}" class="w-5 h-5"></i>
+                    </button>
+                    <button onclick="removeTodo(${index})" class="text-sm p-1 rounded-full text-red-400 hover:text-red-600 transition-colors ml-1">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </li>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function addTodo() {
+            const input = document.getElementById('todoInput');
+            const task = input.value.trim();
+            if (task) {
+                todoListItems.unshift({ text: task, completed: false });
+                input.value = '';
+                renderTodoList();
+            }
+        }
+        
+        function removeTodo(index) {
+            todoListItems.splice(index, 1);
+            renderTodoList();
+        }
+
+        function toggleTodo(index) {
+            todoListItems[index].completed = !todoListItems[index].completed;
+            renderTodoList();
+        }
+        
+        // Add task on 'Enter' key press
+        document.getElementById('todoInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                addTodo();
+            }
+        });
+
+        // 8. Teacher Profiles
+        function showTeacherProfiles() {
+            const content = `
+                <div class="space-y-4 max-h-96 overflow-y-auto pr-2">
+                    ${teacherData.map(t => `
+                        <div class="bg-page-bg p-4 rounded-xl border border-border-color">
+                            <h4 class="text-lg font-bold text-primary-teal mb-1">${t.name} <span class="text-sm font-normal text-text-secondary">(${t.subject})</span></h4>
+                            <p class="text-sm text-text-secondary"><span class="font-semibold text-text-primary">Qualifications:</span> ${t.qualifications}</p>
+                            <p class="text-sm text-text-secondary"><span class="font-semibold text-text-primary">Research Papers:</span> ${t.researchPapers}+</p>
+                            <p class="text-sm text-text-secondary"><span class="font-semibold text-text-primary">Past Institutes:</span> ${t.pastInstitutes}</p>
+                            <p class="text-sm mt-1"><span class="font-bold text-yellow-600">Student Rating:</span> ${t.studentRating}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            showModal("Faculty Profile Directory", content, "Connect with your mentors.");
+        }
+
+
+        // --- INITIALIZATION ---
+        window.onload = function() {
+            loadTheme();
+            updateDateTime();
+            setMotivationalQuote();
+            renderClasses();
+            renderTests();
+            renderTodoList();
+            renderPerformanceChart();
+            init3DModel();
+            
+            // Re-render Lucide icons again after all JS rendering
+            lucide.createIcons();
+        };
+
+        // Re-render icons on modal open
+        modal.addEventListener('DOMSubtreeModified', (event) => {
+            if (event.currentTarget.classList.contains('flex')) {
+                lucide.createIcons();
+            }
+        }, false);
+        
+        // Re-render icons on notification panel open
+        notificationsPanel.addEventListener('transitionend', (event) => {
+            if (event.propertyName === 'opacity' && notificationsPanel.classList.contains('opacity-100')) {
+                lucide.createIcons();
+            }
+        });
+
+    </script>
+</body>
+</html>

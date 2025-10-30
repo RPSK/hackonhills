@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Timetable</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+    <style>
+        /* --- Styles from index.html (Layout, Sidebar, Header, Search) --- */
+        :root {
+            --font-main: 'Inter', sans-serif; --transition-speed: 0.3s; --page-transition-duration: 0.4s; --bg-main: #F8F9FA;
+            --bg-content: #FFFFFF; --border-color: #E9ECEF; --text-primary: #1F2937; --text-secondary: #6C757D;
+            --menu-title-color: #ADB5BD; --accent-primary: #5D50E6; --accent-primary-hover: #4338CA;
+            --accent-primary-light: #E9E7FD; --notification-bg-color: #FA3E3E; --shadow-color-light: rgba(0, 0, 0, 0.05);
+            --danger-color: #EF4444;
+        }
+        [data-theme="dark"] {
+            --bg-main: #121212; --bg-content: #1E1E1E; --border-color: #333333; --text-primary: #E0E0E0;
+            --text-secondary: #A0A0A0; --menu-title-color: #7A7A7A; --accent-primary: #8A7FFF;
+            --accent-primary-hover: #6366F1; --accent-primary-light: #2A2A44; --notification-bg-color: #FA3E3E;
+            --shadow-color-light: rgba(0, 0, 0, 0.2); --danger-color: #F87171;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-10px); } }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        /* Adjusted body style to fit the new app structure */
+        body { font-family: var(--font-main); color: var(--text-primary); background-color: var(--bg-main); overflow: hidden; height: 100vh; width: 100vw; transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease; }
+        .app-container { display: flex; height: 100vh; }
+        .sidebar { width: 260px; min-width: 260px; padding: 20px 15px; display: flex; flex-direction: column; background-color: var(--bg-content); border-right: 1px solid var(--border-color); transition: all var(--transition-speed) ease; }
+        .sidebar-header { position: relative; }
+        .user-switch-wrapper { display: flex; align-items: center; gap: 15px; padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); cursor: pointer; }
+        .user-switch-wrapper .logo-icon { color: var(--accent-primary); width: 32px; height: 32px; flex-shrink: 0; }
+        .user-switch-wrapper .logo-details { display: flex; flex-direction: column; flex-grow: 1; }
+        .user-switch-wrapper .logo-name { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+        .user-switch-wrapper .logo-subtext { font-size: 12px; color: var(--text-secondary); }
+        .user-switch-arrow { color: var(--text-secondary); transition: transform var(--transition-speed) ease; }
+        .user-switch-arrow.active { transform: rotate(180deg); }
+        .user-switcher-menu { position: absolute; top: 75px; left: 0; width: 100%; background-color: var(--bg-content); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 8px; z-index: 10; opacity: 0; visibility: hidden; transform: translateY(10px) scale(0.95); transition: opacity var(--transition-speed) ease, transform var(--transition-speed) ease, visibility var(--transition-speed) ease; }
+        .user-switcher-menu.active { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
+        .user-switcher-menu .switcher-item { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 6px; cursor: pointer; transition: background-color var(--transition-speed) ease; }
+        .user-switcher-menu .switcher-item:hover { background-color: var(--accent-primary-light); }
+        .user-switcher-menu .switcher-item i { color: var(--text-secondary); width: 20px; text-align: center; }
+        .user-switcher-menu .switcher-item span { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+        .sidebar-menu { flex-grow: 1; overflow-y: auto; }
+        .menu-section { margin-bottom: 25px; }
+        .menu-title { display: block; margin-bottom: 10px; padding: 0 10px; font-size: 12px; font-weight: 500; color: var(--menu-title-color); text-transform: uppercase; letter-spacing: 0.5px; transition: opacity 0.2s ease; }
+        .nav-links { list-style: none; }
+        .nav-links li a { display: flex; align-items: center; padding: 12px 10px; margin-bottom: 5px; border-radius: 8px; text-decoration: none; color: var(--text-primary); font-size: 14px; font-weight: 500; transition: all var(--transition-speed) ease; position: relative; }
+        .nav-links li a i { font-size: 18px; margin-right: 15px; width: 20px; text-align: center; color: var(--text-secondary); transition: color var(--transition-speed) ease, margin-right var(--transition-speed) ease; }
+        .nav-links li a > span { transition: opacity 0.2s ease, visibility 0.2s ease, width 0.2s ease; }
+        .nav-links li:not(.active) a:hover { background-color: var(--accent-primary-light); color: var(--accent-primary); }
+        .nav-links li:not(.active) a:hover i { color: var(--accent-primary); }
+        .nav-links li.active > a:not(.dropdown-toggle) { background-color: var(--accent-primary-light); color: var(--accent-primary); font-weight: 600; }
+        .nav-links li.active > a:not(.dropdown-toggle) i { color: var(--accent-primary); }
+        .nav-links li.active > a:not(.dropdown-toggle)::before { content: ''; position: absolute; left: -15px; top: 50%; transform: translateY(-50%); height: 70%; width: 4px; background-color: var(--accent-primary); border-radius: 0 4px 4px 0; transition: all var(--transition-speed) ease; }
+        .nav-links li.has-submenu .dropdown-toggle { justify-content: space-between; width: 100%; cursor: pointer; }
+        .nav-links li.has-submenu .dropdown-toggle span { display: flex; align-items: center; }
+        .dropdown-arrow { font-size: 12px; transition: transform var(--transition-speed) ease, opacity 0.2s ease; color: var(--text-secondary); }
+        .nav-links li.has-submenu.active > .dropdown-toggle .dropdown-arrow { transform: rotate(180deg); }
+        .submenu { list-style: none; padding-left: 25px; max-height: 0; overflow: hidden; transition: max-height 0.4s ease-in-out; }
+        .nav-links li.has-submenu.active .submenu { max-height: 500px; margin-top: 5px; }
+        .submenu li a { display: flex; align-items: center; padding: 8px 10px; font-size: 13px; color: var(--text-secondary); }
+        .submenu li a:hover { color: var(--accent-primary); background-color: transparent; }
+        .submenu li a img { width: 24px; height: 24px; border-radius: 50%; margin-right: 12px; object-fit: cover; }
+        .submenu li a .notification-badge { margin-left: auto; background-color: var(--accent-primary); color: #fff; font-size: 10px; font-weight: 600; min-width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 0 4px; }
+        .sidebar-footer .user-profile { display: flex; align-items: center; gap: 15px; }
+        .sidebar-footer .user-profile img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+        .sidebar-footer .user-profile .user-details { display: flex; flex-direction: column; }
+        .sidebar-footer .user-profile .user-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+        .sidebar-footer .user-profile .user-email { font-size: 12px; color: var(--text-secondary); }
+        .theme-switcher-container { display: flex; align-items: center; justify-content: space-between; padding: 12px 10px; margin-bottom: 20px; }
+        .theme-switcher-container span { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+        .theme-switch { cursor: pointer; background-color: var(--accent-primary-light); width: 50px; height: 26px; border-radius: 50px; position: relative; display: flex; align-items: center; padding: 0 5px; }
+        .switch-thumb { background-color: #fff; width: 18px; height: 18px; border-radius: 50%; position: absolute; left: 4px; transition: transform var(--transition-speed) ease; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .theme-switch i { font-size: 12px; color: var(--accent-primary); }
+        .theme-switch .fa-sun { margin-left: auto; }
+        [data-theme="dark"] .switch-thumb { transform: translateX(24px); background-color: var(--bg-content); }
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        header { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 2.5rem; position: sticky; top: 0; z-index: 100; background-color: var(--bg-main); border-bottom: 1px solid var(--border-color); min-height: 90px; }
+        .header-actions { display: flex; align-items: center; gap: 1.5rem; }
+        .profile { display: flex; align-items: center; gap: 12px; }
+        .profile img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-color); }
+        .profile span { font-weight: 600; font-size: 0.95rem; }
+
+        /* --- SEARCH BAR CSS --- */
+        .search { background: var(--bg-content); position: relative; display: flex; border-radius: 8px; box-shadow: 0 4px 16px -1px var(--shadow-color-light); width: 62px; height: 62px; padding: 0; transition: width 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55), background .1s ease, transform .1s ease; }
+        .search .bar { position: absolute; left: 15px; top: 15px; width: 32px; height: 32px; overflow: hidden; cursor: pointer; z-index: 2; }
+        .search form { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; position: relative; height: 100%;}
+        .search.open { width: 350px; }
+        .search.open .bar { left: 16px; top: 15px; cursor: default; }
+        .search.open form { opacity: 1; pointer-events: auto; }
+        .search .bar span { display: block; color: #fff; position: absolute; left: 12px; top: 0; line-height: 32px; font-weight: 500; font-size: 16px; opacity: 0; right: 16px; overflow: hidden; white-space: nowrap; }
+        .search .bar:before { content: ''; position: absolute; display: block; left: 0; top: 0; bottom: 0; right: 16px; border-radius: 16px 0 0 16px; background: var(--accent-primary); opacity: 0; }
+        .search .bar .icon { flex: 0 0 32px; width: 32px; height: 32px; background: var(--accent-primary); border-radius: 50%; position: absolute; z-index: 1; top: 0; right: 0; transform-style: preserve-3d; transform-origin: 0 0; transform: scale(.8); transition: transform .4s ease 0s, background .1s ease, opacity 0.3s ease; }
+        .search .bar .icon:before, .search .bar .icon:after { content: ''; display: block; position: absolute; backface-visibility: hidden; border-radius: 50%; }
+        .search .bar .icon:before { background: #fff; left: 4px; top: 4px; right: 4px; bottom: 4px; z-index: 2; transform: rotateY(0deg); transition: background .1s ease; }
+        .search .bar .icon:after { background: var(--accent-primary); left: 0; top: 0; right: 0; bottom: 0; transform: rotateY(180deg); transition: background .1s ease; }
+        .search .bar .icon i { left: 75%; top: 84%; position: absolute; display: block; transform: rotate(-45deg); transform-origin: 0 0; }
+        .search .bar .icon i:before { content: ''; width: 4px; height: 16px; border-radius: 2px; background: var(--accent-primary); display: block; transform-origin: 50% 0; transition: transform .4s ease 0s, background .1s ease; }
+        .search form input { height: 100%; width: 0; padding: 0 0 0 48px; color: var(--text-primary); caret-color: var(--accent-primary); border: 0; background: 0; outline: none; font-size: 16px; font-family: inherit; font-weight: 500; transition: width 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55), color .1s ease; }
+        .search.open form input { width: 100%; padding-right: 16px; }
+        .search form input::placeholder { color: var(--text-secondary); opacity: 1; }
+        .search form span { position: absolute; visibility: hidden; top: -9999px; left: -9999px; white-space: pre; font-size: 16px; font-family: inherit; font-weight: 500; }
+        .search .close { border-radius: 50%; position: absolute; right: 16px; width: 32px; height: 32px; top: 15px; background: var(--accent-primary-light); cursor: pointer; opacity: 0; visibility: hidden; transform: translate(-8px, 0); transition: transform .3s ease 0s, opacity .3s ease 0s, visibility .3s ease 0s; }
+        .search .close:before, .search .close:after { content: ''; position: absolute; width: 2px; border-radius: 1px; height: 14px; background: var(--text-secondary); display: block; left: 50%; top: 50%; transition: background .3s ease; }
+        .search .close:before { transform: translate(-50%, -50%) rotate(45deg); }
+        .search .close:after { transform: translate(-50%, -50%) rotate(-45deg); }
+        .search ul { background: var(--bg-content); border-radius: 8px; overflow: hidden; margin: 0; padding: 8px 0 24px 0; list-style: none; position: absolute; left: 16px; top: 62px; white-space: nowrap; transition: opacity 0.3s ease; visibility: hidden; opacity: 0; }
+        .search ul.show { visibility: visible; opacity: 1; }
+        .search ul.show li { opacity: 1; visibility: visible; transform: translate(0, 0); }
+        .search ul li { margin: 0 0 20px 0; opacity: 0; visibility: hidden; transition: all .3s ease; transform: translate(0, -6px); }
+        .search ul li a { display: block; font-size: 12px; text-decoration: none; padding-left: 36px; padding-right: 24px; position: relative; }
+        .search ul li a h5 { margin: 0; color: var(--text-primary); font-size: 12px; }
+        .search ul li a p { margin: 4px 0; color: var(--text-secondary); }
+        .search.submit { background: var(--accent-primary); transform: scale(.92); }
+        .search.submit .bar .icon { background: #fff; }
+        .search.submit .bar .icon:before { background: var(--accent-primary); }
+        .search.submit .bar .icon:after { background: #fff; }
+        .search.submit .bar .icon i:before { background: #fff; }
+        .search.submit form input { color: #fff; caret-color: #fff; }
+        .search.prepare .bar:before { opacity: 1; transition: opacity 0s ease 1.25s; }
+        .search.prepare .bar .icon { transform: scale(1); transform-origin: 50% 50% 0; transition: transform .4s ease .85s, transform-origin 0s ease 1.25s, background .1s ease; }
+        .search.prepare .bar .icon i:before { transform: scaleY(0); transition: transform .4s ease .4s, background .1s ease; }
+        .search.animate .bar .icon { transform: rotateY(75deg); transition: transform .6s ease 0s; }
+        .search.animate .bar span { opacity: 1; }
+        .search.done { padding-right: 56px; transition: padding .4s ease; }
+        .search.done .bar .icon { transform: rotateY(180deg); opacity: 0; }
+        .search.done .close { opacity: 1; visibility: visible; transform: translate(0, 0); transition: transform .4s ease .5s, opacity .4s ease .5s, visibility .4s ease .5s; }
+        .search.done .close:hover { background: var(--accent-primary-hover); }
+        .search.done .close:hover:before, .search.done .close:hover:after { background: #fff; }
+        .search.reset .bar:before { opacity: 0; transition: opacity 0s ease .4s; }
+        .search.reset .bar .icon { transform: rotateY(0deg); transition: transform .4s ease 0s; }
+        
+        /* --- STYLES FOR SIDEBAR TOGGLE & COLLAPSE --- */
+        .header-left-cluster {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .sidebar-toggle {
+            font-size: 20px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-speed) ease;
+            padding: 8px;
+            border-radius: 8px;
+        }
+        .sidebar-toggle:hover {
+            color: var(--accent-primary);
+            background-color: var(--accent-primary-light);
+        }
+        .sidebar.collapsed {
+            width: 88px;
+            min-width: 88px;
+            padding-left: 0;
+            padding-right: 0;
+        }
+        .sidebar.collapsed .user-switch-wrapper,
+        .sidebar.collapsed .nav-links li a,
+        .sidebar.collapsed .theme-switcher-container {
+            justify-content: center;
+        }
+        .sidebar.collapsed .user-switch-wrapper {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        .sidebar.collapsed .logo-details,
+        .sidebar.collapsed .user-switch-arrow,
+        .sidebar.collapsed .nav-links li a > span,
+        .sidebar.collapsed .has-submenu .dropdown-toggle > span,
+        .sidebar.collapsed .menu-title,
+        .sidebar.collapsed .dropdown-arrow,
+        .sidebar.collapsed .user-details,
+        .sidebar.collapsed .theme-switcher-container > span {
+            opacity: 0;
+            visibility: hidden;
+            width: 0;
+            transition: opacity 0.2s ease, visibility 0.2s ease, width 0.2s ease;
+            white-space: nowrap;
+        }
+        .sidebar.collapsed .nav-links li a i {
+            margin-right: 0;
+        }
+        .sidebar.collapsed .nav-links li.active > a:not(.dropdown-toggle)::before {
+            left: 0;
+            border-radius: 0;
+            height: 100%;
+            opacity: 0.5;
+        }
+        .sidebar.collapsed .has-submenu.active .submenu,
+        .sidebar.collapsed .has-submenu .submenu {
+            display: none;
+        }
+        .sidebar.collapsed .has-submenu .dropdown-toggle {
+            pointer-events: none;
+        }
+
+        .pages { padding: 2.5rem; }
+        .page { display: none; animation: fadeIn var(--page-transition-duration) ease-out forwards; }
+        .page.active { display: block; }
+        .page.hiding { animation: fadeOut var(--page-transition-duration) ease-in forwards; }
+        /* --- End of index.html Styles --- */
+
+
+        /* --- Original timetable.html Custom Styles (Preserved) --- */
+        body {
+            /* font-family and background color are now controlled by :root and .main-content */
+        }
+        /* Custom styles for timetable interaction */
+        .subject-cell {
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+            user-select: none;
+        }
+        .subject-cell:hover {
+            background-color: #f1f5f9; /* slate-100 */
+        }
+        .subject-cell:active {
+            background-color: #e2e8f0; /* slate-200 */
+            transform: scale(0.97);
+        }
+        #class-details-card {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out, margin-bottom 0.5s ease-in-out;
+            margin-bottom: 0;
+        }
+        /* Adjusted the complex timetable layout to fit inside the new page structure */
+        #timetable-page .max-w-screen-2xl {
+            /* Removed original body padding as it's now on .pages */
+            padding: 0;
+        }
+        /* Added margin bottom to class details card for separation in the new flow */
+        #class-details-card {
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- START: SIDEBAR (Copied from index.html) -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="user-switch-wrapper">
+                    <svg class="logo-icon" width="32" height="32" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+                    <div class="logo-details">
+                        <span class="logo-name">Alex Johnson</span>
+                        <span class="logo-subtext">student</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-down user-switch-arrow"></i>
+                </div>
+                <div class="user-switcher-menu">
+                    <div class="switcher-item" data-name="Alex Johnson" data-role="student"> <i class="fa-solid fa-user-graduate"></i> <span>Student</span> </div>
+                    <div class="switcher-item" data-name="Prof. Anderson" data-role="teacher"> <i class="fa-solid fa-user-tie"></i> <span>Teacher</span> </div>
+                </div>
+            </div>
+
+            <div class="sidebar-menu">
+                <div class="menu-section">
+                    <span class="menu-title">Menu</span>
+                    <ul class="nav-links">
+                        <li><a href="#home" class="nav-link"><i class="fa-solid fa-table-cells-large"></i> <span>Dashboard</span></a></li>
+                        <li class="has-submenu">
+                            <a class="nav-link dropdown-toggle">
+                                <span><i class="fa-solid fa-user-check"></i> <span>Attendance</span></span>
+                                <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+                            </a>
+                            <ul class="submenu">
+                                <li><a href="#"><span>Mark Attendance</span></a></li>
+                                <li><a href="#"><span>Attendance Log</span></a></li>
+                            </ul>
+                        </li>
+                        <li class="active"><a href="#timetable-page" class="nav-link"><i class="fa-solid fa-calendar-days"></i> <span>Timetable</span></a></li>
+                        <li class="has-submenu">
+                            <a class="nav-link dropdown-toggle">
+                                <span><i class="fa-solid fa-comments"></i> <span>Group Chats</span></span>
+                                <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+                            </a>
+                            <ul class="submenu">
+                                <li><a href="#"><img src="https://i.pravatar.cc/150?u=group1" alt="Logo"><span>Project Phoenix</span><span class="notification-badge">3</span></a></li>
+                                <li><a href="#"><img src="https://i.pravatar.cc/150?u=group2" alt="Logo"><span>Calculus Study Group</span><span class="notification-badge">1</span></a></li>
+                                <li><a href="#"><img src="https://i.pravatar.cc/150?u=group3" alt="Logo"><span>CS Dept. Announcements</span></a></li>
+                                <li><a href="#"><img src="https://i.pravatar.cc/150?u=group4" alt="Logo"><span>Hackathon Team</span><span class="notification-badge">7</span></a></li>
+                                <li><a href="#"><img src="https://i.pravatar.cc/150?u=group5" alt="Logo"><span>Senior Design Project</span></a></li>
+                            </ul>
+                        </li>
+                        <li><a href="#exams" class="nav-link"><i class="fa-solid fa-file-pen"></i> <span>Exams / Results</span></a></li>
+                    </ul>
+                </div>
+                <div class="menu-section">
+                    <span class="menu-title">Insights</span>
+                    <ul class="nav-links">
+                        <li><a href="#ai-assistant" class="nav-link"><i class="fa-solid fa-robot"></i> <span>AI Assistant</span></a></li>
+                        <li><a href="#notes" class="nav-link"><i class="fa-solid fa-note-sticky"></i> <span>Notes</span></a></li>
+                        <li><a href="#assignments" class="nav-link"><i class="fa-solid fa-list-check"></i> <span>Assignments</span></a></li>
+                        <li><a href="#help" class="nav-link"><i class="fa-solid fa-circle-question"></i> <span>Help</span></a></li>
+                        <li><a href="#settings" class="nav-link"><i class="fa-solid fa-cog"></i> <span>Settings</span></a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="theme-switcher-container">
+                    <span>Dark/Light</span>
+                    <div class="theme-switch">
+                        <div class="switch-thumb"></div>
+                        <i class="fa-solid fa-moon"></i>
+                        <i class="fa-solid fa-sun"></i>
+                    </div>
+                </div>
+                <div class="user-profile">
+                    <img src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="User Avatar">
+                    <div class="user-details">
+                        <span class="user-name">Alex Johnson</span>
+                        <span class="user-email">alex.j@school.edu</span>
+                    </div>
+                </div>
+            </div>
+        </nav>
+        <!-- END: SIDEBAR -->
+        
+        <main class="main-content">
+            <!-- START: HEADER (Copied from index.html) -->
+            <header>
+                <div class="header-left-cluster">
+                    <div class="sidebar-toggle">
+                        <i class="fa-solid fa-bars"></i>
+                    </div>
+                    <div class="search">
+                        <div class="bar"> <div class="icon"><i></i></div> </div>
+                        <form><input type="text" placeholder="Search...."></form>
+                        <div class="close"></div>
+                        <ul>
+                            <li><a href="#"><h5>Timetable Search</h5><p>Find classes, rooms, or teachers.</p></a></li>
+                            <li><a href="#"><h5>Math Assignment</h5><p>Due tomorrow at 5 PM.</p></a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <div class="profile">
+                        <img src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="Profile Picture">
+                        <span>Alex Johnson</span>
+                    </div>
+                </div>
+            </header>
+            <!-- END: HEADER -->
+            
+            <div class="pages">
+                <!-- START: Original timetable.html content, now wrapped in a page section -->
+                <section id="timetable-page" class="page active">
+                    <div class="page-header mb-6">
+                        <h1 class="text-2xl font-bold text-gray-800">Student Timetable</h1>
+                    </div>
+                    
+                    <div class="flex flex-col lg:flex-row gap-8 max-w-screen-2xl mx-auto">
+                        <!-- Main Content -->
+                        <div class="flex-1">
+                             <!-- Hidden Class Info Card -->
+                            <section id="class-details-card" class="bg-white rounded-2xl shadow-sm overflow-hidden mb-6">
+                                <div class="flex flex-col md:flex-row">
+                                    <div class="bg-blue-600 text-white p-6 rounded-t-2xl md:rounded-l-2xl md:rounded-t-none md:w-1/3 flex flex-col items-center text-center relative">
+                                        <button id="close-details-btn" class="absolute top-2 right-3 text-white/70 hover:text-white text-3xl font-bold leading-none">&times;</button>
+                                        <img id="teacher-avatar" src="https://placehold.co/80x80/E0E7FF/4F46E5?text=AV" alt="Teacher" class="w-20 h-20 rounded-full border-4 border-white/50 mb-4">
+                                        <h2 id="teacher-name" class="text-xl font-bold">Dr. Evelyn Reed</h2>
+                                        <p id="teacher-department" class="text-blue-200 text-sm">Computer Science Dept.</p>
+                                    </div>
+                                    <div class="p-6 flex-1">
+                                        <h3 id="class-name" class="text-xl font-bold text-gray-800 mb-4">Class Details</h3>
+                                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-4 text-sm">
+                                            <div>
+                                                <p class="text-gray-500">Course Code</p>
+                                                <p id="course-code" class="font-semibold text-gray-800">CS101</p>
+                                            </div>
+                                            <div>
+                                                <p class="text-gray-500">Room</p>
+                                                <p id="class-room" class="font-semibold text-gray-800">B-103</p>
+                                            </div>
+                                            <div>
+                                                <p class="text-gray-500">Credits</p>
+                                                <p id="class-credits" class="font-semibold text-gray-800">3</p>
+                                            </div>
+                                            <div class="col-span-2 sm:col-span-3">
+                                                <p class="text-gray-500">Description</p>
+                                                <p id="class-description" class="font-semibold text-gray-800">An introductory course to fundamental data structures and algorithms.</p>
+                                            </div>
+                                        </div>
+                                        <div class="mt-6 flex items-center gap-4">
+                                            <button class="flex-1 text-sm bg-red-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-red-600 active:bg-red-700 active:scale-95 transform transition-all duration-150">
+                                                Request to Cancel
+                                            </button>
+                                            <button class="flex-1 text-sm bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-gray-300 active:bg-gray-400 active:scale-95 transform transition-all duration-150">
+                                                Shift Class
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <!-- Schedule -->
+                            <section class="bg-white p-6 rounded-2xl shadow-sm">
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-sm text-center border-collapse">
+                                        <thead>
+                                            <tr class="border-b">
+                                                <th class="p-3 font-medium text-gray-500"></th>
+                                                <th class="p-3 font-medium text-blue-600 border-b-2 border-blue-600">Monday</th>
+                                                <th class="p-3 font-medium text-blue-600">Tuesday</th>
+                                                <th class="p-3 font-medium text-blue-600">Wednesday</th>
+                                                <th class="p-3 font-medium text-blue-600">Thursday</th>
+                                                <th class="p-3 font-medium text-blue-600">Friday</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="timetable-body">
+                                            <tr class="border-b">
+                                                <td class="p-3 font-medium text-gray-600 border-r">09.00 - 10.30 WIB</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Mathematic">Mathematic</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Mathematic">Mathematic</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="English">English</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Indonesian">Indonesian</td>
+                                                <td class="p-3 subject-cell" data-subject="History">History</td>
+                                            </tr>
+                                            <tr class="border-b">
+                                                <td class="p-3 font-medium text-gray-600 border-r">10.30 - 11.30 WIB</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Mathematic">Mathematic</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Biology">Biology</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Biology">Biology</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Mathematic">Mathematic</td>
+                                                <td class="p-3 subject-cell" data-subject="Religion">Religion</td>
+                                            </tr>
+                                            <tr class="border-b">
+                                                <td class="p-3 font-medium text-gray-600 border-r">11.30 - 12.00 WIB</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Art and culture">Art and culture</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Indonesian">Indonesian</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Physics">Physics</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Crafts">Crafts</td>
+                                                <td class="p-3 subject-cell" data-subject="Mathematic">Mathematic</td>
+                                            </tr>
+                                            <tr class="border-b">
+                                                <td class="p-3 font-medium text-gray-600 border-r">12.00 - 12.45 WIB</td>
+                                                <td colspan="5" class="p-3 bg-blue-50 text-blue-600 font-semibold">Rest</td>
+                                            </tr>
+                                            <tr class="border-b">
+                                                <td class="p-3 font-medium text-gray-600 border-r">12.45 - 14.30 WIB</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Mathematic">Mathematic</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Indonesian">Indonesian</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Physics">Physics</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Mathematic">Mathematic</td>
+                                                <td class="p-3 subject-cell" data-subject="Mathematic">Mathematic</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="p-3 font-medium text-gray-600 border-r">14.30 - 15.30 WIB</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Mathematic">Mathematic</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Religion">Religion</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Physics">Physics</td>
+                                                <td class="p-3 border-r subject-cell" data-subject="Mathematic">Mathematic</td>
+                                                <td class="p-3 subject-cell" data-subject="Art and culture">Art and culture</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </section>
+                        </div>
+
+                        <!-- Right Sidebar -->
+                        <aside class="w-full lg:w-80 flex-shrink-0 space-y-6">
+                            <!-- Calendar Widget -->
+                            <div id="calendar-widget" class="bg-white p-4 rounded-2xl shadow-sm">
+                                <div class="flex justify-between items-center mb-4">
+                                    <div class="flex items-center gap-2">
+                                        <button class="bg-blue-500 text-white text-sm font-semibold py-1 px-3 rounded-lg">Today</button>
+                                        <button class="text-gray-600 text-sm font-semibold py-1 px-3 rounded-lg hover:bg-gray-100">Tomorrow</button>
+                                    </div>
+                                    <button class="text-gray-400 text-sm p-1 rounded-md hover:bg-gray-100">&times;</button>
+                                </div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <button id="prev-month" class="p-1 rounded-full hover:bg-gray-100 text-gray-500">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                                    </button>
+                                    <h3 id="month-year" class="font-semibold text-gray-800">May 2021</h3>
+                                    <button id="next-month" class="p-1 rounded-full hover:bg-gray-100 text-gray-500">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                    </button>
+                                </div>
+                                <div id="calendar-grid" class="grid grid-cols-7 text-center text-sm gap-y-2">
+                                    <!-- Calendar will be generated here by JS -->
+                                </div>
+                            </div>
+
+                            <!-- Next Classes List -->
+                            <div class="bg-white p-4 rounded-2xl shadow-sm">
+                                <h3 class="font-bold text-lg text-gray-800 mb-4">Next Classes</h3>
+                                <div class="space-y-4">
+                                    <div class="flex items-center gap-3">
+                                        <img src="https://placehold.co/40x40/C7D2FE/4338CA?text=DS" alt="Class" class="w-10 h-10 rounded-full">
+                                        <div>
+                                            <p class="font-semibold text-sm text-gray-800">Data Structures</p>
+                                            <p class="text-xs text-gray-500">Today, 09:00 - 10:30</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <img src="https://placehold.co/40x40/FECACA/991B1B?text=WD" alt="Class" class="w-10 h-10 rounded-full">
+                                        <div>
+                                            <p class="font-semibold text-sm text-gray-800">Web Development</p>
+                                            <p class="text-xs text-gray-500">Today, 11:00 - 12:30</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <img src="https://placehold.co/40x40/A7F3D0/065F46?text=AL" alt="Class" class="w-10 h-10 rounded-full">
+                                        <div>
+                                            <p class="font-semibold text-sm text-gray-800">Algorithms</p>
+                                            <p class="text-xs text-gray-500">Tomorrow, 10:00 - 11:30</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Request Class -->
+                            <div class="bg-white p-4 rounded-2xl shadow-sm">
+                                <h3 class="font-bold text-lg text-gray-800 mb-2">Request Another Class</h3>
+                                <div class="flex justify-between items-center">
+                                    <div class="flex items-center gap-2">
+                                        <button class="bg-blue-100 text-blue-600 p-2 rounded-lg">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg>
+                                        </button>
+                                        <button class="bg-blue-100 text-blue-600 p-2 rounded-lg">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><line x1="12" x2="12" y1="5" y2="19"></line><line x1="5" x2="19" y1="12" y2="12"></line></svg>
+                                        </button>
+                                    </div>
+                                    <img src="https://placehold.co/120x60/DBEAFE/3B82F6?text=Students" alt="Students illustration" class="h-16">
+                                </div>
+                            </div>
+                        </aside>
+                    </div>
+                </section>
+                <!-- END: Original timetable.html content -->
+            </div>
+        </main>
+    </div>
+    
+    <!-- Load jQuery for the Search Bar functionality -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+    <script>
+        // Data for timetable interaction
+        const classData = {
+            'Mathematic': { teacher: 'Dr. Alan Turing', department: 'Mathematics Dept.', avatar: 'AT', code: 'MATH101', room: 'C-201', credits: '4', description: 'Covers topics in calculus, algebra, and geometry.' },
+            'Biology': { teacher: 'Dr. Rosalind Franklin', department: 'Biology Dept.', avatar: 'RF', code: 'BIO101', room: 'L-105', credits: '3', description: 'An introduction to cellular biology and genetics.' },
+            'English': { teacher: 'Prof. Jane Austen', department: 'Literature Dept.', avatar: 'JA', code: 'ENG202', room: 'H-302', credits: '3', description: 'A survey of 19th-century British literature.' },
+            'Indonesian': { teacher: 'Ibu Siti Rahayu', department: 'Languages Dept.', avatar: 'SR', code: 'INDO101', room: 'L-210', credits: '2', description: 'Fundamentals of the Indonesian language and culture.' },
+            'History': { teacher: 'Dr. Herodotus', department: 'History Dept.', avatar: 'DH', code: 'HIST100', room: 'H-101', credits: '3', description: 'A study of ancient civilizations and their impact.' },
+            'Religion': { teacher: 'Prof. Mircea Eliade', department: 'Theology Dept.', avatar: 'ME', code: 'REL250', room: 'T-100', credits: '2', description: 'Comparative study of world religions.' },
+            'Art and culture': { teacher: 'Mr. Vincent van Gogh', department: 'Fine Arts Dept.', avatar: 'VG', code: 'ART110', room: 'S-102', credits: '3', description: 'Practical studio course on painting techniques.' },
+            'Physics': { teacher: 'Dr. Marie Curie', department: 'Physics Dept.', avatar: 'MC', code: 'PHY201', room: 'S-301', credits: '4', description: 'Exploration of classical mechanics and thermodynamics.' },
+            'Crafts': { teacher: 'Ms. Anni Albers', department: 'Applied Arts Dept.', avatar: 'AA', code: 'CRAFT101', room: 'W-104', credits: '2', description: 'Hands-on introduction to various crafting disciplines.' }
+        };
+
+        // --- START: Combined and Integrated JavaScript Logic ---
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            // --- 1. Original Timetable & Calendar Logic (Preserved) ---
+            const monthYearEl = document.getElementById('month-year');
+            const calendarGridEl = document.getElementById('calendar-grid');
+            const prevMonthBtn = document.getElementById('prev-month');
+            const nextMonthBtn = document.getElementById('next-month');
+
+            let currentDate = dayjs('2021-05-19');
+
+            function renderCalendar() {
+                monthYearEl.textContent = currentDate.format('MMMM YYYY');
+                calendarGridEl.innerHTML = '';
+                const daysOfWeek = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+                daysOfWeek.forEach(day => {
+                    const dayEl = document.createElement('div');
+                    dayEl.className = 'text-gray-400 font-medium';
+                    dayEl.textContent = day;
+                    calendarGridEl.appendChild(dayEl);
+                });
+
+                const firstDayOfMonth = currentDate.startOf('month').day();
+                for (let i = 0; i < firstDayOfMonth; i++) {
+                    calendarGridEl.appendChild(document.createElement('div'));
+                }
+
+                const daysInMonth = currentDate.daysInMonth();
+                for (let i = 1; i <= daysInMonth; i++) {
+                    const dayEl = document.createElement('div');
+                    dayEl.textContent = i;
+                    let classes = 'cursor-pointer rounded-full w-7 h-7 flex items-center justify-center mx-auto';
+                    if (currentDate.month() === 4 && currentDate.year() === 2021 && i === 19) {
+                        classes += ' bg-blue-500 text-white';
+                    } else if (currentDate.month() === 4 && currentDate.year() === 2021 && i === 27) {
+                        classes += ' bg-blue-100 text-blue-600';
+                    } else {
+                        classes += ' hover:bg-gray-100';
+                    }
+                    dayEl.className = classes;
+                    calendarGridEl.appendChild(dayEl);
+                }
+            }
+
+            prevMonthBtn.addEventListener('click', () => {
+                currentDate = currentDate.subtract(1, 'month');
+                renderCalendar();
+            });
+
+            nextMonthBtn.addEventListener('click', () => {
+                currentDate = currentDate.add(1, 'month');
+                renderCalendar();
+            });
+
+            renderCalendar();
+
+            // Timetable interaction logic
+            const classDetailsCard = document.getElementById('class-details-card');
+            const closeDetailsBtn = document.getElementById('close-details-btn');
+            const subjectCells = document.querySelectorAll('.subject-cell');
+            
+            subjectCells.forEach(cell => {
+                cell.addEventListener('click', () => {
+                    const subject = cell.dataset.subject;
+                    const data = classData[subject] || { teacher: 'N/A', department: 'N/A', avatar: '?', code: 'N/A', room: 'N/A', credits: 'N/A', description: 'No details available.' };
+
+                    // Populate the card
+                    document.getElementById('teacher-name').textContent = data.teacher;
+                    document.getElementById('teacher-department').textContent = data.department;
+                    document.getElementById('teacher-avatar').src = `https://placehold.co/80x80/E0E7FF/4F46E5?text=${data.avatar}`;
+                    document.getElementById('class-name').textContent = subject;
+                    document.getElementById('course-code').textContent = data.code;
+                    document.getElementById('class-room').textContent = data.room;
+                    document.getElementById('class-credits').textContent = data.credits;
+                    document.getElementById('class-description').textContent = data.description;
+                    
+                    // Show the card
+                    // Use a slight delay to ensure scrollHeight is calculated correctly after content population
+                    setTimeout(() => {
+                        classDetailsCard.style.maxHeight = classDetailsCard.scrollHeight + 'px';
+                        classDetailsCard.style.marginBottom = '1.5rem'; // same as mb-6
+                    }, 50);
+                });
+            });
+
+            closeDetailsBtn.addEventListener('click', () => {
+                classDetailsCard.style.maxHeight = '0';
+                classDetailsCard.style.marginBottom = '0';
+            });
+            
+            // --- 2. Search Bar JS (Copied from index.html) ---
+            $('.search').each(function() {
+                var self = $(this); var form = self.children('form'); var input = form.children('input');
+                var span = $('<span />').appendTo(form); var bar = self.children('.bar'); var close = self.children('.close');
+                var list = self.children('ul'); bar.on('click', function(e) { if (!self.hasClass('open') && !self.hasClass('prepare')) { e.stopPropagation(); self.addClass('open'); input.focus(); } });
+                $(document).on('click', function(e) { if (self.hasClass('open') && !self.hasClass('prepare') && !self.is(e.target) && self.has(e.target).length === 0) { self.removeClass('open'); } });
+                form.submit(function(e) { e.preventDefault(); if(!self.hasClass('prepare') && input.val().length > 0) { input.css('color', 'transparent'); input.blur(); $('<span />').text(input.val()).appendTo(bar); self.addClass('prepare submit'); setTimeout(function() { self.removeClass('submit'); }, 200); setTimeout(function() { self.addClass('animate'); bar.animate({ width: (self.outerWidth() - 32) }, 800, function() { var searchW = ((list.outerWidth() + 32) > (72 + bar.outerWidth())) ? (list.outerWidth() + 32) : 72 + bar.outerWidth(); self.animate({ width: searchW }, 400); setTimeout(function() { self.animate({ height: self.outerHeight() + list.outerHeight() }, 500, function() { list.addClass('show'); }); }, 200); }); setTimeout(function() { self.addClass('done'); }, 800); }, 1250); } });
+                close.on('click', function(e) { self.removeClass('done'); setTimeout(function() { list.removeClass('show'); bar.animate({ width: 32 }, 1000, function() { self.addClass('reset'); bar.children('span').remove(); setTimeout(function() { self.removeClass('animate reset prepare'); input.css('color', ''); setTimeout(function() { input.val(''); bar.removeAttr('style'); }, 200); }, 400); }); setTimeout(function() { self.animate({ height: 62 }, 400, function() { self.removeClass('open'); setTimeout(function() { self.removeAttr('style'); }, 450); }); }, 200); }, 500); });
+            });
+
+            // --- 3. Sidebar, Theme, and User Switcher Logic (Copied from index.html) ---
+            
+            // Sidebar Toggle Logic
+            const sidebarToggle = document.querySelector('.sidebar-toggle');
+            const sidebar = document.querySelector('.sidebar');
+            if (sidebarToggle && sidebar) {
+                sidebarToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('collapsed');
+                });
+            }
+
+            // Page Switch Logic (simplified for a single-page timetable file)
+            // It ensures the Timetable link is always 'active'
+            const allNavLinks = document.querySelectorAll('.nav-link:not(.dropdown-toggle)');
+            allNavLinks.forEach(link => {
+                 link.addEventListener('click', e => {
+                    if (link.getAttribute('href') !== '#timetable-page') {
+                        // Prevent navigation for non-existent pages in this file
+                        e.preventDefault(); 
+                    }
+                    // Close any open submenus when a main link is clicked
+                    document.querySelectorAll('.has-submenu.active').forEach(submenu => submenu.classList.remove('active'));
+                });
+            });
+
+            // Dropdown Logic
+            const dropdownToggles = document.querySelectorAll('.dropdown-toggle');
+            dropdownToggles.forEach(toggle => {
+                toggle.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    toggle.closest('.has-submenu').classList.toggle('active');
+                });
+            });
+
+            // User Switcher Logic
+            const userSwitchWrapper = document.querySelector('.user-switch-wrapper');
+            const userSwitchMenu = document.querySelector('.user-switcher-menu');
+            const userSwitchArrow = document.querySelector('.user-switch-arrow');
+            const switcherItems = document.querySelectorAll('.switcher-item');
+            const userNameDisplay = document.querySelector('.logo-details .logo-name');
+            const userRoleDisplay = document.querySelector('.logo-details .logo-subtext');
+            userSwitchWrapper.addEventListener('click', () => { userSwitchMenu.classList.toggle('active'); userSwitchArrow.classList.toggle('active'); });
+            switcherItems.forEach(item => { item.addEventListener('click', () => { const name = item.getAttribute('data-name'); const role = item.getAttribute('data-role'); userNameDisplay.textContent = name; userRoleDisplay.textContent = role; userSwitchMenu.classList.remove('active'); userSwitchArrow.classList.remove('active'); }); });
+
+            // Theme Switcher Logic
+            const themeSwitch = document.querySelector('.theme-switch');
+            const applyTheme = (theme) => { document.documentElement.setAttribute('data-theme', theme); localStorage.setItem('theme', theme); };
+            themeSwitch.addEventListener('click', () => { const currentTheme = document.documentElement.getAttribute('data-theme'); const newTheme = currentTheme === 'light' ? 'dark' : 'light'; applyTheme(newTheme); });
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            applyTheme(savedTheme);
+
+        });
+        // --- END: Combined and Integrated JavaScript Logic ---
+    </script>
+
+</body>
+</html>

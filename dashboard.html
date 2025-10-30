@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Academic Dashboard</title>
+    <style>
+        /* Import a modern font */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        :root {
+            /* Clean & Soft Light Theme Palette */
+            --bg-color: #F8F9FD;
+            --card-bg: #FFFFFF;
+            --border-color: #E8EBF3;
+            --shadow-color: rgba(108, 142, 191, 0.15);
+            --text-color: #1a202c;
+            --text-secondary: #718096;
+            --accent-color: #4A90E2;
+            --accent-dark: #3a82d0;
+            --accent-light: #EAF2FE;
+            --hover-color: #f0f2f7; /* Color for hover effects */
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow: hidden;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            padding: 25px 50px;
+            display: flex;
+            align-items: center;
+            min-height: 50px; /* Prevent layout shift from typing effect */
+        }
+
+        .greeting-title {
+            font-size: 36px; /* Increased size */
+            font-weight: 700;
+        }
+
+        /* Typing effect cursor */
+        .greeting-title::after {
+            content: '|';
+            font-weight: 400;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* Main content container */
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 0 50px 50px 50px;
+            gap: 30px;
+            overflow: hidden;
+        }
+
+        /* Left column for Brain and Profile */
+        .left-column {
+            flex: 0 0 35%; /* Adjusted width */
+            display: flex;
+            height: 100%;
+            flex-direction: column;
+            gap: 30px;
+        }
+        
+        /* ADJUSTMENT 1: Make 3D model container take up most of the vertical space */
+        .brain-container {
+            position: relative;
+            /* 3/4 of the available vertical space in the left-column */
+            flex: 3; 
+            min-height: 350px;
+            overflow: hidden;
+        }
+
+        /* Right column for academic cards */
+        .right-column {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto; /* Fix: Let rows size to content */
+            gap: 30px;
+            align-content: start; /* Fix: Prevent rows from stretching */
+        }
+
+        /* Base card style */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 25px;
+            box-shadow: 0 10px 25px var(--shadow-color);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px var(--shadow-color);
+        }
+
+        .card-header {
+            position: relative; /* For positioning the dots */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 15px; /* Spacing for the line */
+            border-bottom: 1px solid var(--border-color); /* Line after heading */
+            margin-bottom: 20px;
+        }
+        
+        /* Dot on the header line */
+        .card-header::before {
+            content: '';
+            position: absolute;
+            bottom: -4px; /* Position on the border line */
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            left: 0;
+        }
+
+        /* Animate dot on card click */
+        .card.dots-active .card-header::before {
+            left: calc(100% - 8px);
+        }
+
+        /* Special active state for test card front */
+        .test-card.dots-active .test-card-front .card-header::before {
+            left: calc(100% - 8px);
+        }
+
+
+        .card-title {
+            font-size: 24px; /* Made bigger */
+            font-weight: 600;
+        }
+        
+        .brain-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Overlays to hide Sketchfab UI */
+        .overlay-top, .overlay-bottom {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 40px; /* Adjust height to hide watermarks */
+            background-color: var(--bg-color); /* Match page background */
+            z-index: 10;
+            pointer-events: none; /* Let clicks pass through */
+        }
+        .overlay-top { top: 0; }
+        .overlay-bottom { bottom: 0; }
+
+        /* Timetable card styling - NEW SQUARE GRID */
+        .schedule-card {
+             /* Reset to default flex behavior in the right column grid */
+             flex: initial; 
+             /* ADJUSTMENT 3: Reposition schedule card to the right column grid area */
+             grid-column: 1 / 2;
+             grid-row: 2 / 7;
+             height: 100%;
+             min-height: 300px; /* Ensure minimum visibility */
+        }
+        .today-schedule-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 15px;
+            flex-grow: 1;
+        }
+        .class-slot {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            aspect-ratio: 1 / 1;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            background-color: var(--hover-color);
+            position: relative; /* For positioning the live box */
+        }
+        .class-subject {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        .class-time {
+            font-weight: 500;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-top: 8px;
+        }
+        /* Live class styling */
+        .class-slot.live {
+            border: 2px solid var(--accent-color);
+        }
+        .live-indicator {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background-color: var(--accent-color);
+            color: white;
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        /* Attendance Card Styling */
+        .attendance-card {
+            grid-column: 1 / 2; grid-row: 1 / 2; cursor: pointer; overflow: hidden;
+        }
+        .attendance-body {
+            flex-grow: 1; position: relative; display: flex; align-items: center; justify-content: center;
+        }
+        .attendance-display {
+            transition: transform 0.4s ease, opacity 0.4s ease;
+        }
+        .progress-circle {
+            position: relative; width: 150px; height: 150px; border-radius: 50%; background: conic-gradient(var(--accent-color) 270deg, var(--border-color) 0deg); display: flex; align-items: center; justify-content: center;
+        }
+        .progress-circle::before {
+            content: ''; position: absolute; width: 120px; height: 120px; background: var(--card-bg); border-radius: 50%;
+        }
+        .progress-text { z-index: 1; font-size: 36px; font-weight: 700; }
+        .progress-text span { font-size: 18px; }
+
+        .attendance-actions {
+            position: absolute;
+            display: flex;
+            gap: 20px;
+            transition: all 0.4s ease;
+            opacity: 0;
+            transform: translateY(100%);
+            pointer-events: none;
+        }
+        .attendance-btn {
+            width: 120px;
+            height: 120px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .attendance-btn:hover {
+            background-color: var(--accent-dark);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 20px rgba(74, 144, 226, 0.3);
+        }
+        .attendance-btn:active {
+            background-color: #2c6eb8;
+            transform: translateY(0) scale(0.97);
+            box-shadow: none;
+        }
+        
+        .attendance-card.button-mode .attendance-display {
+            transform: translateY(-150%);
+            opacity: 0;
+        }
+        .attendance-card.button-mode .attendance-actions {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        /* Assignments Card Styling */
+        .assignments-card { 
+            grid-column: 2 / 3; /* Positioned in second column */
+            grid-row: 1 / 3; /* Spans both rows */
+        }
+        .assignments-card .assignment-list { 
+            list-style: none; padding: 0; margin: 0; 
+        }
+        .assignments-card .assignment-item { 
+            display: flex; justify-content: space-between; align-items: center; padding: 12px 10px; border-bottom: 1px solid var(--border-color); border-radius: 12px; transition: background-color 0.3s ease;
+        }
+        .assignments-card .assignment-item:hover {
+            background-color: var(--hover-color);
+        }
+        .assignments-card .assignment-item:last-child { border-bottom: none; }
+        .assignments-card .assignment-title { font-weight: 500; }
+        .task-checkbox {
+            width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border-color); cursor: pointer; transition: background-color 0.3s ease, border-color 0.3s ease; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-left: 15px;
+        }
+        .task-checkbox.checked { background-color: var(--accent-color); border-color: var(--accent-color); }
+        .task-checkbox.checked::after { content: '✔'; color: white; font-size: 14px; }
+        #assignment-counter { font-size: 16px; color: var(--text-secondary); font-weight: 500; }
+
+        /* Upcoming Test Card Styling with Flip Animation */
+        .test-card {
+            /* ADJUSTMENT 2: Reposition test card to the left column below the 3D model */
+            grid-column: initial;
+            grid-row: initial;
+            /* Reset to default flex behavior in the left column */
+            flex: 1.2; 
+            perspective: 1000px; /* For 3D effect */
+            background: none; /* The inner card will have the background */
+            border: none;
+            box-shadow: none;
+            padding: 0;
+        }
+        .test-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .test-card.is-flipped .test-card-inner {
+            transform: rotateY(180deg);
+        }
+        .test-card-front, .test-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            box-sizing: border-box; /* Ensure padding is included in size */
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 25px;
+            box-shadow: 0 10px 25px var(--shadow-color);
+            display: flex;
+            flex-direction: column;
+        }
+        .test-card-back {
+            transform: rotateY(180deg);
+            opacity: 0;
+            transition: opacity 0.5s ease 0.2s;
+        }
+        .test-card.is-flipped .test-card-back {
+            opacity: 1;
+        }
+        .test-list { 
+            list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 15px; /* Replaced flex-grow */
+        }
+        .test-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px; /* Padding for the box effect */
+            border-radius: 12px;
+            transition: background-color 0.3s ease;
+        }
+        .test-item:hover {
+            background-color: var(--hover-color);
+        }
+        .test-name { font-weight: 500; }
+        .test-action { display: flex; align-items: center; }
+        .test-date { font-weight: 600; color: var(--accent-color); }
+        .flip-arrow {
+            font-size: 24px;
+            color: var(--accent-color);
+            margin-left: 15px;
+            cursor: pointer;
+            opacity: 0;
+            transform: translateX(-10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .test-item:hover .flip-arrow {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .back-button {
+            background: none; border: none; font-size: 24px; cursor: pointer; position: absolute; top: 20px; right: 20px;
+        }
+        .back-details h3 { margin-top: 0; }
+        .back-details p { color: var(--text-secondary); }
+        .back-details span { color: var(--text-color); font-weight: 500; }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .main-container { flex-direction: column; padding: 20px; }
+            .right-column, .left-column { flex: 1 1 auto; }
+            .right-column { grid-template-columns: 1fr; }
+            .assignments-card, .test-card, .attendance-card, .schedule-card { grid-row: auto; grid-column: auto; flex: initial !important; }
+            .header { padding: 20px; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <div class="greeting">
+            <div id="greeting-title" class="greeting-title"></div>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <!-- The Left Column now contains the tall 3D Model and the Tests Card -->
+        <div class="left-column">
+            <!-- START: 3D Model (Now taller) -->
+            <div class="brain-container">
+                <iframe title="TF Alliance Bumblebee 2007 ROTF" frameborder="0" allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true" allow="autoplay; fullscreen; xr-spatial-tracking" xr-spatial-tracking execution-while-out-of-viewport execution-while-not-rendered web-share src="https://sketchfab.com/models/5c695a9da1664cc1bbf9a1646e59f03b/embed?autospin=1&autostart=1&preload=1&transparent=1"> </iframe> 
+                <p style="font-size: 13px; font-weight: normal; margin: 5px; color: #4A4A4A;"> 
+                    <a href="https://sketchfab.com/3d-models/tf-alliance-bumblebee-2007-rotf-5c695a9da1664cc1bbf9a1646e59f03b?utm_medium=embed&utm_campaign=share-popup&utm_content=5c695a9da1664cc1bbf9a1646e59f03b" target="_blank" rel="nofollow" style="font-weight: bold; color: #1CAAD9;"> TF Alliance Bumblebee 2007 ROTF </a> by 
+                    <a href="https://sketchfab.com/joseclaudio162001?utm_medium=embed&utm_campaign=share-popup&utm_content=5c695a9da1664cc1bbf9a1646e59f03b" target="_blank" rel="nofollow" style="font-weight: bold; color: #1CAAD9;"> Pipogame </a> on 
+                    <a href="https://sketchfab.com?utm_medium=embed&utm_campaign=share-popup&utm_content=5c695a9da1664cc1bbf9a1646e59f03b" target="_blank" rel="nofollow" style="font-weight: bold; color: #1CAAD9;">Sketchfab</a>
+                </p>
+                <div class="overlay-top"></div>
+                <div class="overlay-bottom"></div>
+            </div>
+            <!-- END: Updated 3D Model -->
+            
+            <!-- START: Upcoming Tests Card (Moved from Right to Left) -->
+            <div class="card test-card">
+                <div class="test-card-inner">
+                    <div class="test-card-front">
+                        <div class="card-header">
+                           <h2 class="card-title">Upcoming Tests</h2>
+                       </div>
+                       <ul class="test-list" role="list">
+                           <li class="test-item" role="listitem" data-title="Advanced Calculus Midterm" data-syllabus="Chapters 3-5" data-room="Hall C-12">
+                               <span class="test-name">Advanced Calculus Midterm</span>
+                               <div class="test-action">
+                                   <span class="test-date">Nov 05</span>
+                                   <span class="flip-arrow" aria-label="View test details">&rarr;</span>
+                               </div>
+                           </li>
+                           <li class="test-item" role="listitem" data-title="Physics II Final" data-syllabus="Full Course" data-room="Lab 4-A">
+                               <span class="test-name">Physics II Final</span>
+                               <div class="test-action">
+                                   <span class="test-date">Nov 12</span>
+                                   <span class="flip-arrow" aria-label="View test details">&rarr;</span>
+                               </div>
+                           </li>
+                           <li class="test-item" role="listitem" data-title="History Paper Due" data-syllabus="Research Paper Submission" data-room="Online Portal">
+                               <span class="test-name">History Paper Due</span>
+                               <div class="test-action">
+                                   <span class="test-date">Nov 18</span>
+                                   <span class="flip-arrow" aria-label="View test details">&rarr;</span>
+                               </div>
+                           </li>
+                       </ul>
+                    </div>
+                    <div class="test-card-back">
+                        <button class="back-button" aria-label="Go back to test list">&times;</button>
+                        <div class="back-details">
+                            <h3 id="test-detail-title"></h3>
+                            <p>Syllabus: <span id="test-detail-syllabus"></span></p>
+                            <p>Location: <span id="test-detail-room"></span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- END: Upcoming Tests Card -->
+        </div>
+        
+        <!-- The Right Column now contains Attendance, Assignments, and Schedule -->
+        <div class="right-column">
+             <div class="card attendance-card">
+                <div class="card-header">
+                    <h2 class="card-title">Overall Attendance</h2>
+                </div>
+                <div class="attendance-body">
+                    <div class="attendance-display">
+                        <div class="progress-circle">
+                             <div class="progress-text">75<span>%</span></div>
+                        </div>
+                    </div>
+                    <!-- Fixed: Corrected 'classs' to 'class' -->
+                    <div class="attendance-actions">
+                         <button class="attendance-btn" aria-label="Mark Today's Attendance">Mark Attendance</button>
+                         <button class="attendance-btn" aria-label="View Attendance Details">View Details</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- START: Today's Schedule Card (Moved from Left to Right) -->
+            <div class="card schedule-card">
+                <div class="card-header">
+                     <h2 class="card-title">Today's Schedule</h2>
+                </div>
+                <div class="today-schedule-grid">
+                    <div class="class-slot">
+                        <div class="class-subject">Data Structures</div>
+                        <div class="class-time">9:00 - 10:30</div>
+                    </div>
+                     <div class="class-slot live">
+                        <div class="live-indicator">LIVE</div>
+                        <div class="class-subject">Linear Algebra</div>
+                        <div class="class-time">11:00 - 12:30</div>
+                    </div>
+                    <div class="class-slot">
+                        <div class="class-subject">Physics Lab</div>
+                        <div class="class-time">1:30 - 3:00</div>
+                    </div>
+                     <div class="class-slot">
+                        <div class="class-subject">History</div>
+                        <div class="class-time">3:00 - 4:00</div>
+                    </div>
+                    <div class="class-slot">
+                        <div class="class-subject">Software Eng.</div>
+                        <div class="class-time">4:00 - 5:30</div>
+                    </div>
+                </div>
+            </div>
+            <!-- END: Today's Schedule Card -->
+            
+            <div class="card assignments-card">
+                <div class="card-header">
+                    <h2 class="card-title">Assignments Due</h2>
+                    <span id="assignment-counter"></span>
+                </div>
+                <ul class="assignment-list" role="list">
+                    <li class="assignment-item" role="listitem">
+                        <p class="assignment-title">Algorithm Analysis Report</p>
+                        <div class="task-checkbox" role="checkbox" aria-checked="false" tabindex="0"></div>
+                    </li>
+                     <li class="assignment-item" role="listitem">
+                        <p class="assignment-title">Database Design Project</p>
+                        <div class="task-checkbox checked" role="checkbox" aria-checked="true" tabindex="0"></div>
+                    </li>
+                    <li class="assignment-item" role="listitem">
+                        <p class="assignment-title">Calculus Problem Set 4</p>
+                        <div class="task-checkbox" role="checkbox" aria-checked="false" tabindex="0"></div>
+                    </li>
+                    <li class="assignment-item" role="listitem">
+                        <p class="assignment-title">History Essay Draft</p>
+                        <div class="task-checkbox" role="checkbox" aria-checked="false" tabindex="0"></div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </main>
+    <script>
+        // --- DOTS ANIMATION ON CLICK SCRIPT ---
+        const clickableCards = document.querySelectorAll('.card');
+
+        function resetDotAnimations() {
+            clickableCards.forEach(c => c.classList.remove('dots-active'));
+        }
+
+        clickableCards.forEach(card => {
+            card.addEventListener('click', (event) => {
+                // Don't activate dots if clicking on an interactive element inside
+                if (event.target.closest('.task-checkbox, .flip-arrow, .back-button, .attendance-btn')) {
+                    return;
+                }
+                event.stopPropagation();
+                const wasActive = card.classList.contains('dots-active');
+                resetDotAnimations();
+                if (!wasActive) {
+                    card.classList.add('dots-active');
+                }
+            });
+        });
+
+        document.addEventListener('click', resetDotAnimations);
+
+
+        // --- DYNAMIC GREETING SCRIPT WITH TYPING EFFECT ---
+        const greetingElement = document.getElementById('greeting-title');
+        const currentHour = new Date().getHours();
+        let initialGreeting = '';
+
+        if (currentHour < 12) { initialGreeting = 'Good morning, Mayank!'; } 
+        else if (currentHour < 18) { initialGreeting = 'Good afternoon, Mayank!'; } 
+        else { initialGreeting = 'Good evening, Mayank!'; }
+
+        const greetingPhrases = [ initialGreeting, "How was your day?", "Need help with assignments?", "Ready to be productive?", "Don't forget your next test!" ];
+        let phraseIndex = 0;
+        let charIndex = 0;
+        let isDeleting = false;
+        let fullGreetingText = greetingPhrases[phraseIndex];
+        const typingSpeed = 150, deletingSpeed = 75, delayBeforeAction = 2000;
+
+        function typeWriter() {
+            greetingElement.textContent = fullGreetingText.substring(0, charIndex);
+            if (!isDeleting) {
+                if (charIndex < fullGreetingText.length) { charIndex++; setTimeout(typeWriter, typingSpeed); } 
+                else { isDeleting = true; setTimeout(typeWriter, delayBeforeAction); }
+            } else {
+                if (charIndex > 0) { charIndex--; setTimeout(typeWriter, deletingSpeed); } 
+                else {
+                    isDeleting = false;
+                    phraseIndex = (phraseIndex + 1) % greetingPhrases.length;
+                    fullGreetingText = greetingPhrases[phraseIndex];
+                    setTimeout(typeWriter, typingSpeed);
+                }
+            }
+        }
+        
+        // --- INTERACTIVE ASSIGNMENTS CHECKBOX SCRIPT ---
+        const checkboxes = document.querySelectorAll('.task-checkbox');
+        const counterElement = document.getElementById('assignment-counter');
+        function updateAssignmentCounter() {
+            const totalAssignments = checkboxes.length;
+            const completedAssignments = document.querySelectorAll('.task-checkbox.checked').length;
+            counterElement.textContent = `(${completedAssignments}/${totalAssignments} Done)`;
+        }
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent card click event from firing
+                checkbox.classList.toggle('checked');
+                const isChecked = checkbox.classList.contains('checked');
+                checkbox.setAttribute('aria-checked', isChecked);
+                updateAssignmentCounter();
+            });
+        });
+
+        // --- TEST CARD FLIP SCRIPT ---
+        const testCard = document.querySelector('.test-card');
+        const flipArrows = document.querySelectorAll('.flip-arrow');
+        const backButton = document.querySelector('.back-button');
+        const detailTitle = document.getElementById('test-detail-title');
+        const detailSyllabus = document.getElementById('test-detail-syllabus');
+        const detailRoom = document.getElementById('test-detail-room');
+
+        flipArrows.forEach(arrow => {
+            arrow.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const item = arrow.closest('.test-item');
+                detailTitle.textContent = item.dataset.title;
+                detailSyllabus.textContent = item.dataset.syllabus;
+                detailRoom.textContent = item.dataset.room;
+                testCard.classList.add('is-flipped');
+            });
+        });
+
+        backButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            testCard.classList.remove('is-flipped');
+        });
+
+        // --- INTERACTIVE ATTENDANCE CARD SCRIPT ---
+        const attendanceCard = document.querySelector('.attendance-card');
+        const attendanceButtons = document.querySelectorAll('.attendance-btn');
+
+        attendanceCard.addEventListener('click', () => {
+             // Avoid toggling if already in button mode
+             if (!attendanceCard.classList.contains('button-mode')) {
+                attendanceCard.classList.add('button-mode');
+             }
+        });
+        
+        attendanceButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                attendanceCard.classList.remove('button-mode');
+            });
+        });
+
+
+        // Run functions on page load
+        typeWriter();
+        updateAssignmentCounter();
+
+    </script>
+</body>
+</html>

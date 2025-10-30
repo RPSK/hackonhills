@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NIT Hamirpur | Student Dashboard (Symmetrical Slide-Up)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // Original NIT Hamirpur-inspired colors
+                        'primary-teal': '#008080', 
+                        'accent-light': '#E0FFFF', 
+                        'card-bg': '#FFFFFF',
+                        'page-bg': '#F7F7F7',
+                        // Colors for the 'Cake' layout components adapted to Teal
+                        'sidebar-active-bg': '#E0FFFF',
+                        'sidebar-text': '#005050',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom styles for the Cake layout adapted to the Student Dashboard */
+        .sidebar-item {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .sidebar-item.active {
+            background-color: var(--tw-colors-sidebar-active-bg); 
+            color: var(--tw-colors-sidebar-text); 
+            font-weight: 600;
+            border-left: 4px solid var(--tw-colors-primary-teal);
+            padding-left: 12px;
+        }
+        .shadow-custom {
+             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* --- CENTERED SLIDE UP/DOWN MECHANICS CSS --- */
+        /* Animation duration set globally for smoother feeling */
+        :root {
+            --modal-animation-duration: 0.4s;
+            --modal-animation-timing: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        #detailModal {
+            /* Smooth transition for the backdrop opacity */
+            transition: opacity var(--modal-animation-duration) ease-in-out;
+            align-items: center; 
+            justify-content: center;
+        }
+        
+        /* Modal content box styling for slide-up-to-center */
+        .slide-up-content {
+            /* Initial state: Hidden below the screen */
+            transform: translateY(100vh); 
+            
+            /* Symmetrical transition for both slide-in and slide-out */
+            transition: transform var(--modal-animation-duration) var(--modal-animation-timing); 
+            
+            max-height: 90vh; 
+            width: 100%;
+            max-width: 500px; 
+            border-radius: 12px;
+            z-index: 51;
+            /* Initial opacity for seamless fade-in of the content box */
+            opacity: 0; 
+            transition: transform var(--modal-animation-duration) var(--modal-animation-timing), opacity calc(var(--modal-animation-duration) / 2) ease-in;
+        }
+        
+        /* Active state: Moved to the center */
+        .modal-active .slide-up-content {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Fix for scrollable content inside the modal */
+        #modalContent {
+            overflow-y: auto;
+            max-height: calc(90vh - 120px); /* Adjusted for max-height: 90vh on container */
+        }
+
+        /* --- UPDATED: 3D Model Sizing & Overlays --- */
+        .model-display-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px; /* Give the model rounded corners */
+            background-color: var(--tw-colors-page-bg); /* Ensure bg matches */
+        }
+        .model-display-container iframe {
+            width: 100%;
+            aspect-ratio: 4 / 5; /* CHANGED: Sets a vertical 4:5 ratio */
+            border: none;
+            display: block; /* Fixes layout gaps */
+        }
+        .overlay-top, .overlay-bottom {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 50px; /* Height to hide watermarks */
+            background-color: var(--tw-colors-page-bg); /* Match page background */
+            z-index: 10;
+            pointer-events: none; 
+        }
+        .overlay-top { top: 0; }
+        .overlay-bottom { bottom: 0; }
+
+    </style>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body class="bg-page-bg font-sans min-h-screen">
+
+    <div id="detailModal" class="fixed inset-0 bg-gray-900 bg-opacity-0 z-50 hidden p-4" onclick="closeModal()">
+        <div id="modalContentContainer" class="slide-up-content bg-card-bg p-6 md:p-8 shadow-2xl rounded-xl" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-start mb-4">
+                <h3 id="modalTitle" class="text-2xl font-bold text-gray-800"></h3>
+                <button onclick="closeModal()" class="text-gray-500 hover:text-red-500 transition-colors">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div id="modalContent" class="text-gray-600 space-y-3">
+                <!-- Modal content goes here -->
+            </div>
+            <div id="modalSource" class="mt-4 text-xs text-primary-teal italic"></div>
+        </div>
+    </div>
+
+    <div class="flex min-h-screen">
+        
+        <aside class="w-64 bg-card-bg p-4 flex-shrink-0 border-r border-gray-200 sticky top-0 h-screen overflow-y-auto">
+            
+            <div class="flex items-center mb-6">
+                <span class="text-xl font-bold text-gray-800">NIT Hamirpur</span>
+            </div>
+
+            <nav class="space-y-1">
+                <a href="#" class="sidebar-item active">
+                    <div class="flex items-center space-x-2 text-primary-teal">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                        <span>Dashboard</span>
+                    </div>
+                </a>
+                <a href="#" class="sidebar-item text-gray-600 hover:bg-gray-50">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="table" class="w-4 h-4"></i>
+                        <span>Results & Grades</span>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400"></i>
+                </a>
+                <a href="#" class="sidebar-item text-gray-600 hover:bg-gray-50">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="calendar-check" class="w-4 h-4"></i>
+                        <span>Timetable</span>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400"></i>
+                </a>
+                <a href="#" class="sidebar-item text-gray-600 hover:bg-gray-50">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="file-text" class="w-4 h-4"></i>
+                        <span>Documents</span>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400"></i>
+                </a>
+                <a href="#" class="sidebar-item text-gray-600 hover:bg-gray-50">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="message-circle" class="w-4 h-4"></i>
+                        <span>Notices</span>
+                    </div>
+                </a>
+                <a href="#" class="sidebar-item text-gray-600 hover:bg-gray-50" onclick="showTeacherProfiles()">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="briefcase" class="w-4 h-4"></i>
+                        <span>Faculty Directory</span>
+                    </div>
+                </a>
+            </nav>
+
+            <div class="my-4 border-t border-gray-200"></div>
+
+            <div id="profileBtn" class="mt-4 flex items-center justify-between sidebar-item text-gray-700 hover:bg-gray-100 p-3 bg-white rounded-lg border border-gray-200 cursor-pointer">
+                <div class="flex items-center space-x-2">
+                    <img id="profileImg" class="w-6 h-6 rounded-full object-cover border border-primary-teal p-0.5" src="https://placehold.co/24x24/008080/FFFFFF?text=AS" alt="Aniket Sharma">
+                    <span class="text-sm font-semibold">Aniket Sharma</span>
+                </div>
+                <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400"></i>
+            </div>
+            
+            <p class="mt-4 text-xs text-gray-400">NIT-H Student Portal v1.0</p>
+
+        </aside>
+
+        <div class="flex-grow">
+            <header class="bg-card-bg p-3 border-b border-gray-200 flex items-center justify-between sticky top-0 z-10">
+                <div class="flex items-center space-x-4">
+                    <span class="text-lg font-bold text-gray-800" id="welcomeNote"></span>
+                </div>
+                
+                <div class="flex items-center space-x-3">
+                    <p id="dateTime" class="text-sm text-gray-500"></p>
+                    <i data-lucide="bell" class="w-5 h-5 text-gray-600 cursor-pointer relative">
+                        <span class="absolute top-0 right-0 block w-2 h-2 bg-red-500 rounded-full"></span>
+                    </i>
+                    <i data-lucide="log-out" class="w-5 h-5 text-gray-600 cursor-pointer hover:text-red-500"></i>
+                </div>
+            </header>
+
+            <main class="p-4 md:p-8 max-w-full w-full">
+                <h1 class="text-3xl font-bold text-gray-800 mb-6">Student Dashboard</h1>
+
+                <div class="bg-accent-light p-4 rounded-xl flex justify-between items-center mb-6 border-l-4 border-yellow-500">
+                    <div class="flex items-center space-x-3">
+                        <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-600"></i>
+                        <p class="text-gray-700 font-medium">Attention: **DBMS attendance is at 75%** - the minimum requirement. Please attend all upcoming classes!</p>
+                    </div>
+                    <i data-lucide="x" class="w-5 h-5 text-gray-500 cursor-pointer"></i>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <div class="lg:col-span-2 space-y-6">
+
+                        <!-- 3D Model was here -->
+
+                        <div class="bg-card-bg p-6 rounded-xl shadow-custom border border-gray-100">
+                            <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center"><i data-lucide="bar-chart-3" class="w-6 h-6 mr-2 text-primary-teal"></i> Academic Performance Overview</h2>
+                            <p class="text-gray-500 mb-6">Overall CGPA: <span class="font-bold text-primary-teal">8.25</span> | Past two semester grades and overall progression.</p>
+        
+                            <div class="h-64 bg-accent-light rounded-lg p-4 flex items-end justify-around space-x-2">
+                                <div class="flex flex-col items-center">
+                                    <div class="w-12 bg-primary-teal rounded-t-lg" style="height: 80%;"></div>
+                                    <span class="mt-2 text-sm text-gray-600">Sem 1 (8.2)</span>
+                                </div>
+                                <div class="flex flex-col items-center">
+                                    <div class="w-12 bg-primary-teal rounded-t-lg opacity-75" style="height: 90%;"></div>
+                                    <span class="mt-2 text-sm text-gray-600">Sem 2 (9.0)</span>
+                                </div>
+                                <div class="flex flex-col items-center">
+                                    <div class="w-12 bg-primary-teal rounded-t-lg opacity-50" style="height: 70%;"></div>
+                                    <span class="mt-2 text-sm text-gray-600">Sem 3 (7.8)</span>
+                                </div>
+                                <div class="flex flex-col items-center">
+                                    <div class="w-12 bg-primary-teal rounded-t-lg" style="height: 95%;"></div>
+                                    <span class="mt-2 text-sm text-gray-600">Overall (8.25)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-card-bg p-6 rounded-xl shadow-custom border border-gray-100">
+                            <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center"><i data-lucide="calendar-check" class="w-6 h-6 mr-2 text-primary-teal"></i> Upcoming Classes Today</h2>
+                            <div id="classesList" class="space-y-3">
+                                <!-- Classes data will be rendered here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-1 space-y-6">
+                        
+                        <!-- START: New 3D Model (MOVED HERE) -->
+                        <div class="sketchfab-embed-wrapper">
+                            <div class="model-display-container"> <!-- New wrapper for overlays -->
+                                <iframe 
+                                    class="w-full" 
+                                    title="Transformers Earth Wars Volcanicus" 
+                                    frameborder="0" 
+                                    allowfullscreen 
+                                    mozallowfullscreen="true" 
+                                    webkitallowfullscreen="true" 
+                                    allow="autoplay; fullscreen; xr-spatial-tracking" 
+                                    xr-spatial-tracking 
+                                    execution-while-out-of-viewport 
+                                    execution-while-not-rendered 
+                                    web-share 
+                                    src="https://sketchfab.com/models/2a5620719d1d41faac7114dc47b1e041/embed?autostart=0&camera=0&preload=1&transparent=1"> 
+                                </iframe>
+                                <div class="overlay-top"></div>   <!-- Added overlay -->
+                                <div class="overlay-bottom"></div> <!-- Added overlay -->
+                            </div>
+                            <p style="font-size: 13px; font-weight: normal; margin: 5px 0; color: #4A4A4A; text-align: center;"> <!-- Credits outside overlay wrapper -->
+                                <a href="https://sketchfab.com/3d-models/transformers-earth-wars-volcanicus-2a5620719d1d41faac7114dc47b1e041?utm_medium=embed&utm_campaign=share-popup&utm_content=2a5620719d1d41faac7114dc47b1e041" target="_blank" rel="nofollow" style="font-weight: bold; color: #1CAAD9;"> Transformers Earth Wars Volcanicus </a> 
+                                by <a href="https://sketchfab.com/diegoapc0709?utm_medium=embed&utm_campaign=share-popup&utm_content=2a5620719d1d41faac7114dc47b1e041" target="_blank" rel="nofollow" style="font-weight: bold; color: #1CAAD9;"> diegoapc0709 </a> 
+                                on <a href="https://sketchfab.com?utm_medium=embed&utm_campaign=share-popup&utm_content=2a5620719d1d41faac7114dc47b1e041" target="_blank" rel="nofollow" style="font-weight: bold; color: #1CAAD9;">Sketchfab</a>
+                            </p>
+                        </div>
+                        <!-- END: New 3D Model -->
+
+                        <div class="bg-card-bg p-6 rounded-xl shadow-custom border border-gray-100">
+                            <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center"><i data-lucide="clipboard-list" class="w-6 h-6 mr-2 text-primary-teal"></i> Key Academic Stats</h3>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between border-b pb-2">
+                                    <p class="text-sm font-normal text-gray-500">Overall Attendance</p>
+                                    <span class="text-2xl font-bold text-primary-teal" id="statOverallAttendance"></span> 
+                                </div>
+                                <div class="flex items-center justify-between border-b pb-2">
+                                    <p class="text-sm font-normal text-gray-500">Current CGPA</p>
+                                    <span class="text-2xl font-bold text-primary-teal" id="statCurrentCGPA"></span> 
+                                </div>
+                                <div class="flex items-center justify-between pb-2">
+                                    <p class="text-sm font-normal text-gray-500">Roll Number</p>
+                                    <span class="text-lg font-bold text-gray-700" id="statRollNumber"></span> 
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-card-bg p-6 rounded-xl shadow-custom border border-gray-100">
+                            <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center"><i data-lucide="clipboard-list" class="w-6 h-6 mr-2 text-primary-teal"></i> Upcoming Tests & Exams</h2>
+                            <div id="testsList" class="space-y-3">
+                                <!-- Tests data will be rendered here -->
+                            </div>
+                        </div>
+
+                        <div class="bg-card-bg p-6 rounded-xl shadow-custom border border-gray-100">
+                            <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center"><i data-lucide="user-check" class="w-6 h-6 mr-2 text-primary-teal"></i> Attendance Actions</h2>
+                            <button onclick="showAttendanceOptions()" class="w-full bg-primary-teal text-white py-3 rounded-xl font-bold hover:bg-opacity-90 transition-all shadow-md shadow-primary-teal/30 flex items-center justify-center">
+                                <i data-lucide="scan" class="w-5 h-5 mr-2"></i> Manage/Mark Attendance
+                            </button>
+                        </div>
+                        
+                        <div class="bg-card-bg p-6 rounded-xl shadow-custom border border-gray-100">
+                            <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center"><i data-lucide="list-checks" class="w-6 h-6 mr-2 text-primary-teal"></i> Student To-Do List</h2>
+                            <div class="flex mb-4 space-x-2">
+                                <input type="text" id="todoInput" placeholder="Add a new task..." class="flex-grow p-2 border border-gray-300 rounded-lg focus:ring-primary-teal focus:border-primary-teal transition-colors">
+                                <button onclick="addTodo()" class="bg-primary-teal text-white p-2 rounded-lg hover:bg-opacity-90 transition-colors">
+                                    <i data-lucide="plus" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                            <ul id="todoList" class="space-y-2 text-gray-700">
+                                <!-- To-do items will be rendered here -->
+                            </ul>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="p-4 mt-8">
+                    <div class="max-w-7xl mx-auto text-center text-sm text-gray-600 italic">
+                        <p id="motivationalQuote" class="p-2 rounded-lg bg-accent-light border border-primary-teal/50"></p>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // --- DUMMY DATA ---
+        const studentData = {
+            name: "Aniket Sharma",
+            course: "B.Tech (Computer Science & Engineering)",
+            rollNumber: "21CS1005",
+            institute: "National Institute of Technology, Hamirpur (NIT-H)",
+            overallAttendance: "78.5%",
+            gradeHistory: "8.25 CGPA",
+        };
+
+        const classesData = [
+            { id: 1, subject: "Data Structures & Algorithms", timing: "09:00 AM - 10:00 AM", topic: "Tree Traversal (Inorder, Preorder, Postorder)", teacher: "Dr. Priya Singh", location: "CSE Block, Room 301", attendance: "85%", pastGrade: "A-" },
+            { id: 2, subject: "Database Management Systems", timing: "11:00 AM - 12:00 PM", topic: "SQL Joins and Normalization", teacher: "Prof. Rohan Mehra", location: "Central Lecture Hall, 2B", attendance: "75%", pastGrade: "B+" },
+            { id: 3, subject: "Environmental Studies", timing: "02:00 PM - 03:00 PM", topic: "Renewable Energy Sources in India", teacher: "Dr. Kavita Jain", location: "Civil Dept, Seminar Hall 1", attendance: "92%", pastGrade: "O" },
+            // NEW CLASS 1
+            { id: 4, subject: "Digital Electronics", timing: "04:00 PM - 05:00 PM", topic: "Logic Gates and Sequential Circuits", teacher: "Dr. Sandeep Kumar", location: "Electrical Block, Lab 1", attendance: "88%", pastGrade: "A" },
+            // NEW CLASS 2
+            { id: 5, subject: "Mathematics-III (Probability)", timing: "10:00 AM - 11:00 AM (Tomorrow)", topic: "Bayes' Theorem and Distributions", teacher: "Prof. Aarti Devi", location: "Maths Dept, LT-4", attendance: "79%", pastGrade: "B" },
+        ];
+
+        const testsData = [
+            { id: 101, subject: "DBMS Mid-Term Exam", date: "25/11/2025", timing: "10:00 AM - 12:00 PM", syllabus: "Modules 1-3: Relational Algebra, ER Diagrams, and SQL.", location: "Central Exam Hall (New Wing)" },
+            { id: 102, subject: "DSA End-Term Project Submission", date: "05/12/2025", timing: "11:59 PM", syllabus: "Implementation of a Graph Algorithm (e.g., Dijkstra's or Floyd-Warshall).", location: "Online Submission via Moodle" },
+            // NEW TEST 1
+            { id: 103, subject: "Digital Electronics Quiz 4", date: "01/11/2025", timing: "09:00 AM - 09:30 AM", syllabus: "K-Maps, Half/Full Adders.", location: "Online via Moodle" },
+            // NEW TEST 2
+            { id: 104, subject: "Maths-III Final Exam", date: "20/12/2025", timing: "09:00 AM - 12:00 PM", syllabus: "All units, with emphasis on Regression and Testing.", location: "Central Exam Hall (Old Wing)" },
+        ];
+
+        const teacherData = [
+            { name: "Dr. Priya Singh", subject: "Data Structures & Algorithms", qualifications: "Ph.D. (IIT Delhi), M.Tech (NIT-H)", researchPapers: 35, pastInstitutes: "IIT Gandhinagar, IIIT Hyderabad", studentRating: "4.8/5.0" },
+            { name: "Prof. Rohan Mehra", subject: "Database Management Systems", qualifications: "M.Tech (BITS Pilani), B.Tech (IIT Kanpur)", researchPapers: 12, pastInstitutes: "Infosys (Senior Consultant)", studentRating: "4.5/5.0" },
+            { name: "Dr. Kavita Jain", subject: "Environmental Studies", qualifications: "Ph.D. (BHU), PostDoc (Stanford)", researchPapers: 50, pastInstitutes: "University of Delhi, TERI", studentRating: "4.9/5.0" },
+            // New Faculty 
+            { name: "Dr. Sandeep Kumar", subject: "Digital Electronics", qualifications: "Ph.D. (IIT Roorkee), M.Tech (NIT Bhopal)", researchPapers: 20, pastInstitutes: "BEL, DRDO", studentRating: "4.7/5.0" },
+            { name: "Prof. Aarti Devi", subject: "Mathematics-III", qualifications: "M.Sc. (DU), M.Phil (JNU)", researchPapers: 5, pastInstitutes: "Amity University", studentRating: "4.2/5.0" },
+        ];
+
+        const motivationalQuotes = [
+            "“Arise, awake, and stop not till the goal is reached.” — Swami Vivekananda",
+            "“You have to dream before your dreams can come true.” — A. P. J. Abdul Kalam",
+            "“Be the change that you wish to see in the world.” — Mahatma Gandhi",
+            "“The future belongs to those who believe in the beauty of their dreams.” — Eleanor Roosevelt",
+            "“Education is the most powerful weapon which you can use to change the world.” — Nelson Mandela",
+        ];
+
+        let todoListItems = [
+            { text: "Complete DBMS Assignment 4", completed: false },
+            { text: "Prepare presentation slides for DSA", completed: true },
+            { text: "Review Environmental Studies notes", completed: false },
+            // NEW TO-DO 1
+            { text: "Start studying for Digital Electronics Quiz 4", completed: false },
+            // NEW TO-DO 2
+            { text: "Email Prof. Rohan Mehra about DBMS project query", completed: false }
+        ];
+
+        // --- UTILITY FUNCTIONS ---
+
+        function updateDateTime() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+            document.getElementById('welcomeNote').textContent = "Namaste, Aniket!";
+            document.getElementById('dateTime').textContent = `${dateStr} | ${timeStr}`;
+
+            setTimeout(updateDateTime, 60000); // Update every minute
+        }
+        
+        // Function to render the key academic stats
+        function renderKeyAcademicStats() {
+            // Check if elements exist before assigning content
+            const statOverallAttendance = document.getElementById('statOverallAttendance');
+            const statCurrentCGPA = document.getElementById('statCurrentCGPA');
+            const statRollNumber = document.getElementById('statRollNumber');
+
+            if (statOverallAttendance) {
+                statOverallAttendance.textContent = studentData.overallAttendance;
+            }
+            if (statCurrentCGPA) {
+                statCurrentCGPA.textContent = studentData.gradeHistory;
+            }
+            if (statRollNumber) {
+                statRollNumber.textContent = studentData.rollNumber;
+            }
+        }
+
+        function setMotivationalQuote() {
+            const quoteElement = document.getElementById('motivationalQuote');
+            const randomIndex = Math.floor(Math.random() * motivationalQuotes.length);
+            quoteElement.textContent = motivationalQuotes[randomIndex];
+        }
+
+        // --- MODAL FUNCTIONS (Updated for Symmetrical Centered Slide) ---
+
+        const modal = document.getElementById('detailModal');
+        const modalContentContainer = document.getElementById('modalContentContainer');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalContent = document.getElementById('modalContent');
+        const modalSource = document.getElementById('modalSource');
+
+        function showModal(title, contentHTML, source = "") {
+            modalTitle.textContent = title;
+            modalContent.innerHTML = contentHTML;
+            modalSource.textContent = source;
+            
+            // Set backdrop to visible and opaque first
+            modal.classList.remove('hidden');
+            modal.classList.add('flex', 'bg-opacity-0');
+            setTimeout(() => {
+                modal.classList.add('bg-opacity-50', 'modal-active');
+            }, 10); // Small delay to start the opacity transition
+            
+            // Re-render Lucide icons if the modal is shown
+            setTimeout(lucide.createIcons, 100);
+        }
+
+        function closeModal() {
+            // Start the slide down animation (by removing modal-active)
+            modal.classList.remove('modal-active');
+            
+            // Fade out the backdrop
+            modal.classList.remove('bg-opacity-50');
+            
+            // Hide the modal completely after the content and backdrop animations finish
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex', 'bg-opacity-0');
+                modalContent.innerHTML = '';
+            }, 400); // Must match the CSS transition duration
+        }
+
+        // --- FEATURE IMPLEMENTATIONS ---
+
+        // 1. Student Profile Details (on click)
+        document.getElementById('profileBtn').addEventListener('click', () => {
+            const content = `
+                <p><span class="font-semibold text-primary-teal">Name:</span> ${studentData.name}</p>
+                <p><span class="font-semibold text-primary-teal">Course:</span> ${studentData.course}</p>
+                <p><span class="font-semibold text-primary-teal">Roll Number:</span> ${studentData.rollNumber}</p>
+                <p><span class="font-semibold text-primary-teal">Institute:</span> ${studentData.institute}</p>
+                <p><span class="font-semibold text-primary-teal">Overall Attendance:</span> ${studentData.overallAttendance}</p>
+                <p><span class="font-semibold text-primary-teal">Current CGPA:</span> ${studentData.gradeHistory}</p>
+            `;
+            showModal("Student Profile", content, "This data is private to you.");
+        });
+
+        // 4. Attendance Options
+        function showAttendanceOptions() {
+            const content = `
+                <button class="w-full bg-primary-teal text-white py-3 rounded-xl font-bold hover:bg-opacity-90 transition-all mb-4 flex items-center justify-center" onclick="showAttendanceConfirmation()">
+                    <i data-lucide="scan" class="w-5 h-5 mr-2"></i> Mark Attendance (Simulated)
+                </button>
+                <button class="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-300 transition-all flex items-center justify-center" onclick="showViewAttendance()">
+                    <i data-lucide="eye" class="w-5 h-5 mr-2"></i> View Detailed Attendance
+                </button>
+            `;
+            showModal("Attendance Management", content);
+        }
+
+        function showAttendanceConfirmation() {
+            const content = `
+                <div class="text-center p-4 bg-green-50 text-green-700 rounded-lg">
+                    <i data-lucide="check-circle" class="w-8 h-8 mx-auto mb-2"></i>
+                    <p class="font-bold">Attendance Marked Successfully!</p>
+                    <p class="text-sm mt-1">Simulated check-in for the current class.</p>
+                </div>
+            `;
+            showModal("Mark Attendance", content);
+        }
+
+        function showViewAttendance() {
+            const content = `
+                <p class="text-lg font-bold">Total Attendance: <span class="text-primary-teal">${studentData.overallAttendance}</span></p>
+                <div class="mt-3 space-y-2">
+                    <div class="flex justify-between border-b pb-1"><span>DSA:</span> <span class="font-medium">85%</span></div>
+                    <div class="flex justify-between border-b pb-1"><span>DBMS:</span> <span class="font-medium text-red-500">75%</span></div>
+                    <div class="flex justify-between border-b pb-1"><span>EVS:</span> <span class="font-medium">92%</span></div>
+                    <p class="text-xs italic text-red-500 pt-2">Warning: DBMS is approaching the minimum required 75% attendance!</p>
+                </div>
+            `;
+            showModal("Detailed Attendance View", content);
+        }
+
+        // 5. Upcoming Classes Showcase
+        function renderClasses() {
+            const list = document.getElementById('classesList');
+            list.innerHTML = classesData.map(c => `
+                <div class="class-item bg-accent-light p-4 rounded-xl flex items-center justify-between cursor-pointer hover:shadow-md transition-shadow border-l-4 border-primary-teal" onclick="showClassDetails(${c.id})">
+                    <div>
+                        <p class="font-semibold text-gray-800">${c.subject}</p>
+                        <p class="text-sm text-gray-600">${c.timing} | ${c.topic}</p>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-5 h-5 text-primary-teal"></i>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+
+
+        function showClassDetails(id) {
+            const c = classesData.find(item => item.id === id);
+            if (!c) return;
+            const content = `
+                <p><span class="font-semibold text-primary-teal">Subject:</span> ${c.subject}</p>
+                <p><span class="font-semibold text-primary-teal">Timing:</span> ${c.timing}</p>
+                <p><span class="font-semibold text-primary-teal">Topic:</span> ${c.topic}</p>
+                <p><span class="font-semibold text-primary-teal">Teacher:</span> ${c.teacher}</p>
+                <p><span class="font-semibold text-primary-teal">Location:</span> ${c.location}</p>
+                <p class="pt-2 border-t mt-3"><span class="font-semibold text-primary-teal">Your Attendance in ${c.subject}:</span> ${c.attendance}</p>
+                <p><span class="font-semibold text-primary-teal">Your Past Grade in ${c.subject}:</span> ${c.pastGrade}</p>
+            `;
+            showModal(`${c.subject} Details`, content);
+        }
+
+        // 6. Upcoming Tests/Exams Showcase
+        function renderTests() {
+            const list = document.getElementById('testsList');
+            list.innerHTML = testsData.map(t => `
+                <div class="test-item bg-card-bg p-4 rounded-xl flex items-center justify-between cursor-pointer hover:shadow-md transition-shadow border border-gray-200" onclick="showTestDetails(${t.id})">
+                    <div>
+                        <p class="font-semibold text-gray-800">${t.subject}</p>
+                        <p class="text-sm text-red-500 flex items-center"><i data-lucide="calendar-days" class="w-4 h-4 mr-1"></i> ${t.date}</p>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-5 h-5 text-gray-500"></i>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function showTestDetails(id) {
+            const t = testsData.find(item => item.id === id);
+            if (!t) return;
+            const content = `
+                <p><span class="font-semibold text-primary-teal">Subject:</span> ${t.subject}</p>
+                <p><span class="font-semibold text-primary-teal">Date:</span> ${t.date}</p>
+                <p><span class="font-semibold text-primary-teal">Timing:</span> ${t.timing}</p>
+                <p><span class="font-semibold text-primary-teal">Location:</span> ${t.location}</p>
+                <div class="pt-3 border-t mt-3">
+                    <p class="font-semibold text-primary-teal mb-1">Syllabus:</p>
+                    <p class="text-sm">${t.syllabus}</p>
+                </div>
+                <div class="text-center mt-4 p-3 bg-yellow-50 text-yellow-800 rounded-lg font-bold">
+                    Good luck for your exam! All the best!
+                </div>
+            `;
+            showModal(`${t.subject} Details`, content);
+        }
+
+        // 7. To-Do List
+        function renderTodoList() {
+            const list = document.getElementById('todoList');
+            list.innerHTML = todoListItems.map((item, index) => `
+                <li class="flex items-center justify-between p-2 rounded-lg ${item.completed ? 'bg-green-50 line-through text-gray-500' : 'bg-accent-light hover:bg-primary-teal/20'} transition-colors">
+                    <span class="flex-grow mr-4">${item.text}</span>
+                    <button onclick="toggleTodo(${index})" class="text-sm p-1 rounded-full ${item.completed ? 'text-green-600 hover:text-green-800' : 'text-primary-teal hover:text-green-600'} transition-colors">
+                        <i data-lucide="${item.completed ? 'check-circle' : 'circle'}" class="w-5 h-5"></i>
+                    </button>
+                </li>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function addTodo() {
+            const input = document.getElementById('todoInput');
+            const task = input.value.trim();
+            if (task) {
+                todoListItems.push({ text: task, completed: false });
+                input.value = '';
+                renderTodoList();
+            }
+        }
+
+        function toggleTodo(index) {
+            todoListItems[index].completed = !todoListItems[index].completed;
+            renderTodoList();
+        }
+
+        // 8. Teacher Profiles
+        function showTeacherProfiles() {
+            const content = `
+                <div class="space-y-4">
+                    ${teacherData.map(t => `
+                        <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                            <h4 class="text-lg font-bold text-primary-teal mb-1">${t.name} <span class="text-sm font-normal text-gray-500">(${t.subject})</span></h4>
+                            <p class="text-sm"><span class="font-semibold">Qualifications:</span> ${t.qualifications}</p>
+                            <p class."text-sm"><span class="font-semibold">Student Rating:</span> ${t.studentRating}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            showModal("Faculty Profile Directory", content, "Connect with your mentors.");
+        }
+
+
+        // --- INITIALIZATION ---
+        window.onload = function() {
+            updateDateTime();
+            renderKeyAcademicStats(); // Populate the key stats
+            setMotivationalQuote();
+            renderClasses();
+            renderTests();
+            renderTodoList();
+            lucide.createIcons(); // This will render all icons on load, including the new 'box' icon
+        };
+
+        // Re-render icons after a modal is shown
+        document.getElementById('detailModal').addEventListener('DOMSubtreeModified', (event) => {
+            if (event.currentTarget.classList.contains('flex')) {
+                lucide.createIcons();
+            }
+        }, false);
+
+    </script>
+</body>
+</html>
+
